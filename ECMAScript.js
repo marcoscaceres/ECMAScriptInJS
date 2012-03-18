@@ -1,13 +1,16 @@
 (function(){
 	"use strict"; 
 	var ECMAScript = Object.create({});
-	var props      = createDataProperty(DefineOwnProperty)
-	DefineOwnProperty(ECMAScript, "DefineOwnProperty", props, true );
-	DefineOwnProperty(ECMAScript, "DefineOwnProperty", props, true );
+	var functions  = [ToPrimitive, ToBoolean, ToNumber, ToInteger, ToInt32, ToUint32, ToUint16, 
+					  ToString, ToObject, CheckObjectCoercible, IsCallable, SameValue];  
 	
-	//ToString() 
-	props = createDataProperty(ToString); 
-	DefineOwnProperty(ECMAScript, "ToString", props, true );
+	for(var i = 0; i < functions.length; i++){
+		var func   = functions[i]; 
+		var props  = createDataProperty(func);
+		DefineOwnProperty(ECMAScript, func.name, props, false); 
+	}
+	var props = createDataProperty(ECMAScript); 
+	DefineOwnProperty(window, "ECMAScript", props, false); 
 	
 	//Custom helper function, checks for primitive types
 	function isPrimitiveValue(x){
@@ -298,8 +301,7 @@
 				var toString = Get(O,"toString");
 			 
 				//If IsCallable(toString) is true then,
-				var isCallable = IsCallable(toString);
-				if(isCallable === true){	
+				if( IsCallable(toString) === true){	
 					//Let str be the result of calling the [[Call]] internal method of toString, 
 					//with O as the this value and an empty argument list.
 					var str = Call(toString, O); 
@@ -874,7 +876,7 @@
 		if(m === NaN){
 			return "NaN"; 
 		}
-		If m is +0 or −0, return the String "0".
+		//If m is +0 or −0, return the String "0".
 		if(m === 0 ){
 			return "0";
 		}
@@ -947,7 +949,7 @@
 	The abstract operation CheckObjectCoercible throws an error if its argument is a value that 
 	cannot be converted to an Object using ToObject. It is defined by Table 15:
 	*/
-	function checkObjectCoercible(argument){
+	function CheckObjectCoercible(argument){
 		var result; 
 		//Undefined: Throw a TypeError exception.
 		//Null: Throw a TypeError exception.
@@ -956,14 +958,14 @@
 		}
 		//Boolean, Number, String, Object,
 		return
-	}//checkObjectCoercible
+	}//CheckObjectCoercible
 	
 	/*
 	9.11 IsCallable
 	The abstract operation IsCallable determines if its argument, which must be an
 	ECMAScript language value, is a callable function Object according to Table 16:
 	*/
-	function isCallable(argument){	
+	function IsCallable(argument){	
 		//Undefined Return false.
 		//Null Return false.
 		//Boolean Return false.
