@@ -195,6 +195,11 @@
 		//Return obj.
 	}
 	
+	/*
+	8.12 Algorithms for Object Internal Methods # Ⓣ Ⓓ
+	In the following algorithm descriptions, assume O is a native ECMAScript object, P is a String, 
+	Desc is a Property Description record, and Throw is a Boolean flag.
+	*/
 	function GetOwnProperty(O,P){
 		/*8.12.1 [[GetOwnProperty]] (P) #
 		When the [[GetOwnProperty]] internal method of O is called with property name P, 
@@ -258,8 +263,9 @@
 		GetProperty(proto, P); 
 	}
 	
-	//8.12.3 [[Get]] (P) # Ⓣ 
+	
 	function Get(O,P){
+		//8.12.3 [[Get]] (P) # Ⓣ 
 		//When the [[Get]] internal method of O is called with property name P, 
 		//the following steps are taken:
 		//Let desc be the result of calling the [[GetProperty]] internal method of O with property name P.
@@ -287,6 +293,70 @@
 		//the this value and providing no arguments.
 		return Call(getter,O); 
 	}
+
+	function CanPut(O,P){	
+		/*
+		8.12.4 [[CanPut]] (P) # Ⓣ 
+		When the [[CanPut]] internal method of O is called with property name P, the following steps are taken:
+		*/
+		//Let desc be the result of calling the [[GetOwnProperty]] internal method of O with argument P.
+		var desc = GetOwnProperty(O,P); 
+		
+		//If desc is not undefined, then
+		if(desc !== undefined){
+			//If IsAccessorDescriptor(desc) is true, then
+			if(IsAccessorDescriptor(desc) === true){
+				//If desc.[[Set]] is undefined,
+				if(desc.set === undefined){
+					// then return false.
+					return false; 
+				}
+				//Else return true.
+				return true; 	
+			}
+			//Else, desc must be a DataDescriptor so return the value of desc.[[Writable]].
+			return desc.writable; 
+		}
+		
+		//Let proto be the [[Prototype]] internal property of O.
+		var proto = O.prototype; 
+		
+		//If proto is null,
+		if(proto === null){
+			 //then return the value of the [[Extensible]] internal property of O.
+			 return Object.isExtensible(O);
+		}
+		
+		//Let inherited be the result of calling the [[GetProperty]] internal method of proto with 
+		//property name P.
+		var inherited = GetProperty(proto, P); 
+		
+		//If inherited is undefined, 
+		if(inherited === undefined){
+			//return the value of the [[Extensible]] internal property of O.
+			return Object.isExtensible(O);
+		}
+		
+		//If IsAccessorDescriptor(inherited) is true, then
+		if(IsAccessorDescriptor(inherited) === true){
+			//If inherited.[[Set]] is undefined,
+			if(inherited["set"] === undefined){
+				 //then return false.
+				 return false; 
+			}
+			//Else return true.
+			return true; 
+		}
+		//Else, inherited must be a DataDescriptor
+		//If the [[Extensible]] internal property of O is false, return false.
+		if(!Object.isExtensible(O)){
+			return false; 
+		}
+		//Else return the value of inherited.[[Writable]].
+		return inherited.writable; 
+		//Host objects may define additional constraints upon [[Put]] operations. If possible, host objects should not allow [[Put]] operations in situations where this definition of [[CanPut]] returns false.
+	}
+	
 	
 	/*8.12.8 [[DefaultValue]] (hint)*/
 	function DefaultValue(O, hint){
