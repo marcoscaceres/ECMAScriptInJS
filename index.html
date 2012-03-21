@@ -1,2 +1,21 @@
+<script src="https://raw.github.com/darobin/webidl.js/745cdbddefb6d950a94656fc9857cad3937965f8/web/WebIDLParser.js"></script>
 <script src="ECMAScript.js"></script>
 <script src="WebIDL.js"></script>
+<h1>Web IDL</h1>
+<textarea id="webidl" style="width: 100%; height: 200px">
+exception DOMException {
+  const unsigned short INDEX_SIZE_ERR = 1;
+  const unsigned short DOMSTRING_SIZE_ERR = 2;
+  const unsigned short HIERARCHY_REQUEST_ERR = 3;
+
+  unsigned short code;
+};
+</textarea>
+<div><button onclick="parseIt()">Parse it!</button></div>
+<script>
+	function parseIt(){
+			var idl 	  = document.getElementById("webidl").value; 
+			var parsedIDL = WebIDLParser.parse(idl);
+			WebIDL.implement(parsedIDL)	
+	}
+</script>

@@ -3,7 +3,7 @@
     var ECMAScript = Object.create({});
     var functions = [ToPrimitive, ToBoolean, ToNumber, ToInteger, ToInt32, ToUint32, ToUint16,
     ToString, ToObject, CheckObjectCoercible, IsCallable, SameValue, Type, DefineOwnProperty, 
-	createDataProperty, createAccessorProperty];
+	createDataProperty, createAccessorProperty, Call];
 	//Expose functions 
     for (var i = 0; i < functions.length; i++) {
         var func = functions[i];
@@ -640,7 +640,10 @@
     /*
 	9.1 ToPrimitive # Ⓣ 
 	The abstract operation ToPrimitive takes an input argument 
-	and an optional argument PreferredType. The abstract operation ToPrimitive converts its input argument to a non-Object type. If an object is capable of converting to more than one primitive type, it may use the optional hint PreferredType to favour that type. Conversion occurs according to Table 10:
+	and an optional argument PreferredType. The abstract operation ToPrimitive converts its input argument
+	to a non-Object type. If an object is capable of converting to more than one primitive type, it may use
+	the optional hint PreferredType to favour that type. 
+	Conversion occurs according to Table 10:
 	*/
     function ToPrimitive(input, PreferredType) {
         var inputType = Type(input)
@@ -656,7 +659,7 @@
             //method of the object, passing the optional hint PreferredType.
             //The behaviour of the [[DefaultValue]] internal method is defined
             //by this specification for all native ECMAScript objects in 8.12.8.
-            return DefaultValue(x, PreferredType)
+            return DefaultValue(input, PreferredType)
         }
         return input;
     }
@@ -933,15 +936,14 @@
             return x;
         }
 
-        //Object
+        //Must be an Object
         //Apply the following steps:
-        if (xType === "object") {
-            //1. Let primValue be ToPrimitive(input argument, hint String).
-            var primValue = ToPrimitive("String");
+        //1. Let primValue be ToPrimitive(input argument, hint String).
+        var primValue = ToPrimitive(x, "String");
 
-            //2. Return ToString(primValue).
-            return ToString(primValue);
-        }
+        //2. Return ToString(primValue).
+        return ToString(primValue);
+       
     }
 
     //ToString Applied to the Number Type
@@ -1128,14 +1130,19 @@
         //If result.type is throw then throw result.value.
         //If result.type is return then return result.value.
         //Otherwise result.type must be normal. Return undefined.
-        return F.bind(thisArg).call(args);
+		return F.call(thisArg, args);
     }
 	
 	function Type(x){
 		//correct for null being returned as "Object"
 		var type = (x === null) ? "null": typeof x;
-		//uppercase first letter
-		type = type.charAt(0).toUpperCase() + type.slice(1);
+		if(type === "function"){
+			//correct for function being an Object
+			type = "Object";
+		}else{
+			//uppercase first letter
+			type = type.charAt(0).toUpperCase() + type.slice(1);
+		}
 		return type; 
 	}
 	

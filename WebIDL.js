@@ -14,14 +14,44 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
     ECMAScript.DefineOwnProperty(window, "WebIDL", {
         value: WebIDL
     })
-
-    var functions = [ExceptionFactory];
+    
+	var publicFunctions = [implement, ExceptionFactory];
     //Expose functions
-    for (var i = 0; i < functions.length; i++) {
-        var func = functions[i];
+    for (var i = 0; i < publicFunctions.length; i++) {
+        var func = publicFunctions[i];
         var props = WebIDL.createDataProperty(func);
         WebIDL.DefineOwnProperty(WebIDL, func.name, props, false);
     }
+
+	function implement(parsedIDL){
+		if(!parsedIDL || typeof parsedIDL !== "object" || !parsedIDL instanceof Array  ){
+			throw new TypeError("Expected an array of objects to process");
+		}
+		//Parsed IDL comes in an array form
+		for(var i = 0; i < parsedIDL.length; i++ ){
+			var idlFragment = parsedIDL[i]; 
+			if(!idlFragment.type){
+				console.warm("Can't process fragment without type:", idlFragment);
+				throw new Error("Can't process fragment without type:" + idlFragment + ". See console."); 
+			}
+			
+			switch(idlFragment.type){
+				case("exception"): {
+					console.log("got an exception", idlFragment ); 
+					var identifier   = idlFragment.name || idlFragment.identifier; 
+					var extAttrs     = (idlFragment.extAttrs) ? idlFragment.extAttrs : []; 
+					var members      = idlFragment.members;  
+					
+					ExceptionFactory(identifier, extAttrs, message, members, exceptionFields, parent); 
+					
+					
+				}//exception
+				
+			}
+			
+		}
+	    
+	}
 
     //Exceptions container
     //Used to contain exception prototypes
@@ -61,52 +91,55 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
         }
     }
 
-    function ExceptionFactory(identifier, extendedAttributesList, constants, exceptionFields, parent) {
+    function ExceptionFactory(identifier, extendedAttributesList, members, exceptionFields, parent) {
         /*
 		The internal [[Call]] method of an exception interface object must behave as follows, 
 		assuming arg0..n−1 is the list of argument values passed to the function, 
 		and E is the exception corresponding to the exception interface object:
 		*/
-        var call = function() {
+        var action = function(arg0) {
             //Let O be a new object
             //whose [[Prototype]] internal property is set to
             //the exception interface object
             if (!eInstance) {
                 return e;
             }
-            var O = Object.create(eInstance.prototype);
+			//don't ask! :)
+			var x = e; 
+			e = undefined; 
+            var O = new x();
+			e = x; 
+           // var O = Object.create(e.prototype);
 
             //and whose class string is the identifier of E.
             //If n > 0, then:
-            var objInfo = identifier;
-            if (arguments[0].length > 0) {
+ 			var S; 
+            if (arguments.length > 0 && arg0 !== undefined) {
                 //Let S be the result of calling ToString(arg0).
-                var arg = arguments[0][0].toString();
-                var S = ECMAScript.ToString(arg);
-
-                //Call the [[DefineOwnProperty]] internal method of O passing “message”,
-                //Property Descriptor { [[Value]]: S, [[Writable]]: true,
-                //[[Enumerable]]: false, [[Configurable]]: true }, and false as arguments.
-                var prop = {
-                    value: S,
-                    writable: true,
-                    enumerable: false,
-                    configurable: true
-                }
-				//Exceptions have an associated message, a DOMString, 
-				//which is exposed on an exception object in a language binding-specific manner.
-                ECMAScript.DefineOwnProperty(O, "message", prop);
-				
-				//Exceptions also have an associated type, also a DOMString, which is exposed 
-				//on an exception object in a language binding-specific manner. 
-				//The type of an exception is intended to be used to distinguish between the 
-				//different kinds of exceptions that can be represented by the given IDL exception.	
-				//If a type is not specified, 
-				//it is assumed to be the same as the identifier of the exception.
-                ECMAScript.DefineOwnProperty(O, "type", {value: identifier});
-
-                objInfo += ": " + S;
-            }
+                S = ECMAScript.ToString(arg0);
+			}
+            //Call the [[DefineOwnProperty]] internal method of O passing “message”,
+           //Property Descriptor { [[Value]]: S, [[Writable]]: true,
+           //[[Enumerable]]: false, [[Configurable]]: true }, and false as arguments.
+           var prop = {
+               value: S,
+               writable: true,
+               enumerable: false,
+               configurable: true
+           }
+		   //Exceptions have an associated message, a DOMString, 
+	       //which is exposed on an exception object in a language binding-specific manner.
+           ECMAScript.DefineOwnProperty(O, "message", prop);
+	
+	
+		   //Exceptions also have an associated type, also a DOMString, which is exposed 
+		   //on an exception object in a language binding-specific manner. 
+		   //The type of an exception is intended to be used to distinguish between the 
+		   //different kinds of exceptions that can be represented by the given IDL exception.	
+		   //If a type is not specified, 
+		   //it is assumed to be the same as the identifier of the exception.
+           ECMAScript.DefineOwnProperty(O, "type", {value: identifier});
+            
             ECMAScript.DefineOwnProperty(O, "toString", {
                 value: function() {
                     return objInfo
@@ -122,20 +155,19 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
 		object, which provides access to any constants that have been associated with the exception. 
 		The property has the attributes { [[Writable]]: true, [[Enumerable]]: false, [[Configurable]]: true }.
 		*/
-        var e;
         var eInstance = null;
         if (extendedAttributesList.join().search("NoInterfaceObject") === -1) {
-            var func = "function " + identifier + "(){ return call(arguments) }";
+            var func = "function " + identifier + "(msg){ \n if(e===undefined){\n }else{\n return ECMAScript.Call(action, e, msg)\n } }";
             var props = "{value: " + func + ", writable: true, enumerable: false, configurable: true }"
             var code = "Object.defineProperty(window, '" + identifier + "', " + props + ")";
             eval(code);
-            e = window[identifier];
+            var e = window[identifier];
             eInstance = new e();
         } else {
             var func = "function " + identifier + "(){}";
             var rand = Math.random();
             eval("window[" + rand + "] = " + func);
-            e = window[rand];
+            var e = window[rand];
             delete window[rand];
             eInstance = new e();
         }
@@ -144,6 +176,7 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
 		//If the exception is declared to inherit from another exception, 
 		//then the value of the internal [[Prototype]] property is the exception interface 
 		//prototype object for the inherited exception.
+		
 		
 		//Otherwise, the exception is not declared to inherit from another exception. 
 		//The value of the internal [[Prototype]] property is the 
@@ -175,6 +208,16 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
             }
         }
 
+		 /*
+			The exception interface object must also have a property named “prototype” with attributes
+			 { [[Writable]]: false, [[Enumerable]]: false, [[Configurable]]: false } whose value is an 
+			object called the exception interface prototype object. 
+			This object also provides access to the constants that are declared on the exception.
+		*/
+		if (O instanceof Error){
+			classType = "Exception";
+		}
+
         if (O.hasOwnProperty("prototype")) {
             /*
 			  Interface prototype object
@@ -193,12 +236,7 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
                 }
             }
 
-            /*
-			The exception interface object must also have a property named “prototype” with attributes
-			 { [[Writable]]: false, [[Enumerable]]: false, [[Configurable]]: false } whose value is an 
-			object called the exception interface prototype object. 
-			This object also provides access to the constants that are declared on the exception.
-			*/
+          
         }
 
 
