@@ -131,20 +131,6 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
 	       //which is exposed on an exception object in a language binding-specific manner.
            ECMAScript.DefineOwnProperty(O, "message", prop);
 	
-	
-		   //Exceptions also have an associated type, also a DOMString, which is exposed 
-		   //on an exception object in a language binding-specific manner. 
-		   //The type of an exception is intended to be used to distinguish between the 
-		   //different kinds of exceptions that can be represented by the given IDL exception.	
-		   //If a type is not specified, 
-		   //it is assumed to be the same as the identifier of the exception.
-           ECMAScript.DefineOwnProperty(O, "type", {value: identifier});
-            
-            ECMAScript.DefineOwnProperty(O, "toString", {
-                value: function() {
-                    return objInfo
-                }
-            });
             //Return O.
             return O;
         }
@@ -171,6 +157,20 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
             delete window[rand];
             eInstance = new e();
         }
+		
+		//Exceptions also have an associated type, also a DOMString, which is exposed 
+		//on an exception object in a language binding-specific manner. 
+	   //The type of an exception is intended to be used to distinguish between the 
+	   //different kinds of exceptions that can be represented by the given IDL exception.	
+	   //If a type is not specified, 
+	   //it is assumed to be the same as the identifier of the exception.
+         ECMAScript.DefineOwnProperty(e, "type", {value: identifier});
+           
+           ECMAScript.DefineOwnProperty(e, "toString", {
+               value: function() {
+                   return e.type;
+               }
+           });
 		
 		//Inheritance
 		//If the exception is declared to inherit from another exception, 
