@@ -2,13 +2,15 @@
     "use strict";
     var ECMAScript = Object.create({});
     var functions = [ToPrimitive, ToBoolean, ToNumber, ToInteger, ToInt32, ToUint32, ToUint16,
-    ToString, ToObject, CheckObjectCoercible, IsCallable, SameValue, Type];
-
+    ToString, ToObject, CheckObjectCoercible, IsCallable, SameValue, Type, DefineOwnProperty, 
+	createDataProperty, createAccessorProperty];
+	//Expose functions 
     for (var i = 0; i < functions.length; i++) {
         var func = functions[i];
         var props = createDataProperty(func);
         DefineOwnProperty(ECMAScript, func.name, props, false);
     }
+
     var props = createDataProperty(ECMAScript);
     DefineOwnProperty(window, "ECMAScript", props, false);
 
