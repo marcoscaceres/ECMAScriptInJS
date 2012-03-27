@@ -3,7 +3,7 @@
     var ECMAScript = Object.create({});
     var functions = [ToPrimitive, ToBoolean, ToNumber, ToInteger, ToInt32, ToUint32, ToUint16,
     ToString, ToObject, CheckObjectCoercible, IsCallable, SameValue, Type, DefineOwnProperty, 
-	createDataProperty, createAccessorProperty, Call, sign];
+	createDataProperty, createAccessorProperty, Call];
 	//Expose functions 
     for (var i = 0; i < functions.length; i++) {
         var func = functions[i];
