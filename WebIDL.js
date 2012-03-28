@@ -258,7 +258,7 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
 					break
 				}
 				case "unsigned short":{
-					var result = ToUnsignedShort(value, extAttrs)
+					var result = toUnsignedShort(value, extAttrs)
 					break
 				}
 				case "long":{
@@ -308,11 +308,25 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
 	Figures out the class type of an object, as defined by Web IDL
 	*/
 	
+	function toBoolean(V){
+		//Let x be the result of computing ToBoolean(V).
+		var x = ECMAScript.ToBoolean(V);
+
+		//Return the IDL boolean value that is the one that represents the same
+		truth value as the ECMAScript Boolean value x.
+		return x;
+
+		//The IDL boolean value true is converted to the ECMAScript true value
+		and the IDL boolean value false is converted to the ECMAScript false value.
+	}
+	
+
+	
 	/*
 	4.2.7. unsigned short
 	An ECMAScript value V is converted to an IDL unsigned short value by running the following algorithm:
 	*/	
-	function ToUnsignedShort(V, extAttrs){
+	function toUnsignedShort(V, extAttrs){
 		//Initialize x to ToNumber(V).
 		var x = ECMAScript.ToNumber(V); 
 		
@@ -343,6 +357,64 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
 		//Return the IDL unsigned short value that represents the same numeric value as x.
 		return x;
 	}
+	
+	/*
+	4.2.12. float
+	An ECMAScript value V is converted to an IDL float value by running the following algorithm:
+	*/
+	function toFloat(V){
+		//Let x be ToNumber(V).
+		var x = ECMAScript.ToNumber(V);
+		 
+		//If x is NaN, +Infinity or −Infinity, then throw a TypeError.
+		if(x === NaN || x === +Infinity  || x === -Infinity){
+			throw TypeError(); 	
+		}
+		
+		//Let S be the set of finite IEEE 754 single-precision floating point values except −0, 
+		//but with two special values added: 2128 and −2128.
+		//var S = 
+		//Let y be the number in S that is closest to x, selecting the number with an even significand if there are two equally close values ([ECMA-262], section 8.5). (The two special values 2128 and −2128 are considered to have even significands for this purpose.)
+		//If y is 2128 or −2128, then throw a TypeError.
+		//If y is +0 and x is negative, return −0.
+		//Return y.
+		//The result of converting an IDL float value to an ECMAScript value is the Number value that represents the same numeric value as the IDL float value.
+	}
+	/*
+	4.2.17. object
+	IDL object values are represented by ECMAScript Object values.
+	An ECMAScript value V is converted to an IDL object value by running the following algorithm:
+	*/
+	function toObject(V){
+		//If Type(V) is not Object, then throw a TypeError.
+		if(ECMAScript.Type(v) !== "Object"){
+			throw TypeError(); 
+		}
+		//Return the IDL object value that is a reference to the same object as V.
+		return V; 
+		
+		//The result of converting an IDL object value to an ECMAScript value is the Object value that represents a reference to the same object that the IDL object represents.
+	}
+	
+	/*
+	4.2.18. Interface types
+	IDL interface type values are represented by ECMAScript Object or Function values.
+	An ECMAScript value V is converted to an IDL interface type value by running the following algorithm (where I is the interface):
+	*/
+	function toInterface(V, I){
+		//If Type(V) is not Object, then throw a TypeError.
+		if(ECMAScript.Type(V !== "Object")){
+			throw TypeError(); 
+		}
+		
+		//If V is a platform object that implements I, then return the IDL interface type value that represents a reference to that platform object.
+		if(classType(V) === "platform object")
+		
+		//If V is a user object that is considered to implement I according to the rules in section 4.7, then return the IDL interface type value that represents a reference to that user object.
+		//Throw a TypeError.
+		//The result of converting an IDL interface type value to an ECMAScript value is the Object value that represents a reference to the same object that the IDL interface type value represents.
+	}
+	
 	
 	
     function classType(O) {
