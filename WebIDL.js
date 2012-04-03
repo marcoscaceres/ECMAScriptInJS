@@ -21,13 +21,10 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
         var props = WebIDL.createDataProperty(func);
         WebIDL.DefineOwnProperty(WebIDL, func.name, props, false);
     }
-    
     //function tests conformance of some object to a parsed IDL fragment
     function test(obj, parsedIDL) {
-    	"use strict";
-		
+        "use strict";
     }
-
     //Function implements an IDL fragement
     function implement(parsedIDL) {
         //returns hooks that can be used by other objects
@@ -48,7 +45,7 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
                     console.log("got an exception", idlFragment);
                     var identifier = idlFragment.name || idlFragment.identifier;
                     var extAttrs = (idlFragment.extAttrs) ? idlFragment.extAttrs : [];
-                    var eMembers = idlFragment.members;        
+                    var eMembers = idlFragment.members;
                     //TODO: Waiting for WebIDL Parser to support extensions
                     var parent = undefined;
                     var exception = ExceptionFactory(identifier, extAttrs, eMembers, parent);
@@ -221,65 +218,71 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
 			In addition, a property with the same characteristics must exist on the exception interface prototype object.
 			*/
             //TODO: convert value
-			var result; 
-		
-			switch(type){
-				//primitive types
-				case "boolean":{
-					console.warn("not implemented: " + type)
-					break
-				}
-				
-				case "float":{
-					console.warn("not implemented: " + type)
-					break
-				}
-				
-				case "unresticted float":{
-					console.warn("not implemented: " + type)
-					break
-				}
-				
-				case "unrestricted double":{
-					console.warn("not implemented: " + type)
-					break
-				}
-				//integer types 
-				case "byte":{
-					console.warn("not implemented: " + type)
-					break
-				}
-				case "octet":{
-					console.warn("not implemented: " + type)
-					break
-				}
-				case "short":{
-					console.warn("not implemented: " + type)
-					break
-				}
-				case "unsigned short":{
-					var result = toUnsignedShort(value, extAttrs)
-					break
-				}
-				case "long":{
-					console.warn("not implemented: " + type)
-					break
-				}
-				case "unsigned long":{
-					console.warn("not implemented: " + type)
-					break
-				}
-				case "long long":{
-					console.warn("not implemented: " + type)
-					break
-				}
-				case "unsigned long long":{
-					console.warn("not implemented: " + type)
-					break
-				} 
-				
-			}
-
+            var result;
+            switch (type) {
+                //primitive types
+            case "boolean":
+                {
+                    console.warn("not implemented: " + type)
+                    break
+                }
+            case "float":
+                {
+                    console.warn("not implemented: " + type)
+                    break
+                }
+            case "unresticted float":
+                {
+                    console.warn("not implemented: " + type)
+                    break
+                }
+            case "unrestricted double":
+                {
+                    console.warn("not implemented: " + type)
+                    break
+                }
+                //integer types 
+            case "byte":
+                {
+                    console.warn("not implemented: " + type)
+                    break
+                }
+            case "octet":
+                {
+                    console.warn("not implemented: " + type)
+                    break
+                }
+            case "short":
+                {
+                    console.warn("not implemented: " + type)
+                    break
+                }
+            case "unsigned short":
+                {
+                    var result = toUnsignedShort(value, extAttrs)
+                    break
+                }
+            case "long":
+                {
+                    console.warn("not implemented: " + type)
+                    break
+                }
+            case "unsigned long":
+                {
+                    console.warn("not implemented: " + type)
+                    break
+                }
+            case "long long":
+                {
+                    console.warn("not implemented: " + type)
+                    break
+                }
+            case "unsigned long long":
+                {
+                    console.warn("not implemented: " + type)
+                    break
+                }
+            }
             var prop = {
                 value: value,
                 writable: false,
@@ -296,154 +299,121 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
             }
         };
     }
-	/*
+    /*
 	***** 4.2. ECMASCRIPT TYPE MAPPING ***********
 	This section describes how types in the IDL map to types in ECMAScript.
 	*/
-
-
     /*
 	Figures out the class type of an object, as defined by Web IDL
 	*/
-	
-	function toBoolean(V){
-		//Let x be the result of computing ToBoolean(V).
-		var x = ECMAScript.ToBoolean(V);
-
-		//Return the IDL boolean value that is the one that represents the same
-		//truth value as the ECMAScript Boolean value x.
-		return x;
-
-		//The IDL boolean value true is converted to the ECMAScript true value
-		//and the IDL boolean value false is converted to the ECMAScript false value.
-	}
-	
-
-	
-	/*
+    function toBoolean(V) {
+        //Let x be the result of computing ToBoolean(V).
+        var x = ECMAScript.ToBoolean(V);
+        //Return the IDL boolean value that is the one that represents the same
+        //truth value as the ECMAScript Boolean value x.
+        return x;
+        //The IDL boolean value true is converted to the ECMAScript true value
+        //and the IDL boolean value false is converted to the ECMAScript false value.
+    }
+    /*
 	4.2.7. unsigned short
 	An ECMAScript value V is converted to an IDL unsigned short value by running the following algorithm:
-	*/	
-	function toUnsignedShort(V, extAttrs){
-		//Initialize x to ToNumber(V).
-		var x = ECMAScript.ToNumber(V); 
-		
-		/*
+	*/
+    function toUnsignedShort(V, extAttrs) {
+        //Initialize x to ToNumber(V).
+        var x = ECMAScript.ToNumber(V);
+        /*
 		If the conversion to an IDL value is being performed due to any of the following:
 			V is being assigned to an attribute annotated with the [EnforceRange] extended attribute,
 			V is being passed as an operation argument annotated with the [EnforceRange] extended attribute, or
 			V is being used as the value of dictionary member annotated with the [EnforceRange] extended attribute,
 		*/
-		if(extAttrs.search("EnforceRange") > -1){
-			//If x is NaN, +∞, or -∞, then throw a TypeError.
-			if(x === NaN || x === +Infinity  || x === -Infinity){
-				throw TypeError(); 	
-			}
-			//Set x to sign(x) * floor(abs(x)).
-			x = ECMAScript.sign( x ) * Math.floor(Math.abs(x)); 
-		
-			//If x < 0 or x > 216 - 1, then throw a TypeError.
-			if(x < 0 || x > (Math.pow(2, 16) - 1)) {
-				throw TypeError(); 
-			}
-			//Return the IDL unsigned short value that represents the same numeric value as x.
-			return x ; 
-		}
-		
-		//Set x to ToUint16(x).
-		var x = ECMAScript.ToUint16( x );  
-		//Return the IDL unsigned short value that represents the same numeric value as x.
-		return x;
-	}
-	
-	/*
+        if (extAttrs.search("EnforceRange") > -1) {
+            //If x is NaN, +∞, or -∞, then throw a TypeError.
+            if (x === NaN || x === +Infinity || x === -Infinity) {
+                throw TypeError();
+            }
+            //Set x to sign(x) * floor(abs(x)).
+            x = ECMAScript.sign(x) * Math.floor(Math.abs(x));
+            //If x < 0 or x > 216 - 1, then throw a TypeError.
+            if (x < 0 || x > (Math.pow(2, 16) - 1)) {
+                throw TypeError();
+            }
+            //Return the IDL unsigned short value that represents the same numeric value as x.
+            return x;
+        }
+        //Set x to ToUint16(x).
+        var x = ECMAScript.ToUint16(x);
+        //Return the IDL unsigned short value that represents the same numeric value as x.
+        return x;
+    }
+    /*
 	4.2.12. float
 	An ECMAScript value V is converted to an IDL float value by running the following algorithm:
 	*/
-	function toFloat(V){
-		//Let x be ToNumber(V).
-		var x = ECMAScript.ToNumber(V);
-		 
-		//If x is NaN, +Infinity or -Infinity, then throw a TypeError.
-		if(x === NaN || x === +Infinity  || x === -Infinity){
-			throw TypeError(); 	
-		}
-		
-		//Let S be the set of finite IEEE 754 single-precision floating point values except -0, 
-		//but with two special values added: 2128 and -2128.
-		//var S = 
-		//Let y be the number in S that is closest to x, selecting the number with an even significand if there are two equally close values ([ECMA-262], section 8.5). (The two special values 2128 and -2128 are considered to have even significands for this purpose.)
-		//If y is 2128 or -2128, then throw a TypeError.
-		//If y is +0 and x is negative, return -0.
-		//Return y.
-		//The result of converting an IDL float value to an ECMAScript value is the Number value that represents the same numeric value as the IDL float value.
-	}
-	/*
+    function toFloat(V) {
+        //Let x be ToNumber(V).
+        var x = ECMAScript.ToNumber(V);
+        //If x is NaN, +Infinity or -Infinity, then throw a TypeError.
+        if (x === NaN || x === +Infinity || x === -Infinity) {
+            throw TypeError();
+        }
+        //Let S be the set of finite IEEE 754 single-precision floating point values except -0, 
+        //but with two special values added: 2128 and -2128.
+        //var S = 
+        //Let y be the number in S that is closest to x, selecting the number with an even significand if there are two equally close values ([ECMA-262], section 8.5). (The two special values 2128 and -2128 are considered to have even significands for this purpose.)
+        //If y is 2128 or -2128, then throw a TypeError.
+        //If y is +0 and x is negative, return -0.
+        //Return y.
+        //The result of converting an IDL float value to an ECMAScript value is the Number value that represents the same numeric value as the IDL float value.
+    }
+    /*
 	4.2.17. object
 	IDL object values are represented by ECMAScript Object values.
 	An ECMAScript value V is converted to an IDL object value by running the following algorithm:
 	*/
-	function toObject(V){
-		//If Type(V) is not Object, then throw a TypeError.
-		if(ECMAScript.Type(v) !== "Object"){
-			throw TypeError(); 
-		}
-		//Return the IDL object value that is a reference to the same object as V.
-		return V; 
-		
-		//The result of converting an IDL object value to an ECMAScript value is the Object value that represents a reference to the same object that the IDL object represents.
-	}
-	
-	/*
+    function toObject(V) {
+        //If Type(V) is not Object, then throw a TypeError.
+        if (ECMAScript.Type(v) !== "Object") {
+            throw TypeError();
+        }
+        //Return the IDL object value that is a reference to the same object as V.
+        return V;
+        //The result of converting an IDL object value to an ECMAScript value is the Object value that represents a reference to the same object that the IDL object represents.
+    }
+    /*
 	4.2.18. Interface types
 	IDL interface type values are represented by ECMAScript Object or Function values.
 	An ECMAScript value V is converted to an IDL interface type value by running the following algorithm (where I is the interface):
 	*/
-	function toInterface(V, I){
-		//If Type(V) is not Object, then throw a TypeError.
-		if(ECMAScript.Type(V !== "Object")){
-			throw TypeError(); 
-		}
-		
-		//If V is a platform object that implements I, then return the IDL interface type value that represents a reference to that platform object.
-		if(classType(V) === "platform object"){
-			
-		}
-		
-		//If V is a user object that is considered to implement I according to the rules in section 4.7, then return the IDL interface type value that represents a reference to that user object.
-		//Throw a TypeError.
-		
-		
-		//The result of converting an IDL interface type value to an ECMAScript value is the Object value that represents a reference to the same object that the IDL interface type value represents.
-	}
-	
-	/*
+    function toInterface(V, I) {
+        //If Type(V) is not Object, then throw a TypeError.
+        if (ECMAScript.Type(V !== "Object")) {
+            throw TypeError();
+        }
+        //If V is a platform object that implements I, then return the IDL interface type value that represents a reference to that platform object.
+        if (classType(V) === "platform object") {}
+        //If V is a user object that is considered to implement I according to the rules in section 4.7, then return the IDL interface type value that represents a reference to that user object.
+        //Throw a TypeError.
+        //The result of converting an IDL interface type value to an ECMAScript value is the Object value that represents a reference to the same object that the IDL interface type value represents.
+    }
+    /*
 	4.2.26. Date
 	IDL Date values are represented by ECMAScript Date objects.
 	An ECMAScript value V is converted to an IDL Date value by running the following algorithm:
 	*/
-	
-	function toDate(V){
-		//If V is not an ECMAScript Date object, then throw a TypeError.
-		if(V instanceof Date === false){
-			
-		}
-		
-		//If the time value of V is NaN, then return the undefined IDL Date value.
-		if(isNaN(V.valueOf())){
-			
-		}
-		//Return the IDL Date value that represents the same time value as V.
-		//An IDL Date value V is converted to an ECMAScript value by running the following the algorithm:
+    function toDate(V) {
+        //If V is not an ECMAScript Date object, then throw a TypeError.
+        if (V instanceof Date === false) {}
+        //If the time value of V is NaN, then return the undefined IDL Date value.
+        if (isNaN(V.valueOf())) {}
+        //Return the IDL Date value that represents the same time value as V.
+        //An IDL Date value V is converted to an ECMAScript value by running the following the algorithm:
+        //If V is the undefined Date value, then return a newly constructed ECMAScript Date object whose time value is NaN.
+        //Otherwise, return a newly constructed ECMAScript Date object that represents the same millisecond as V.
+        //Platform objects returning an ECMAScript Date object from attributes, operations or exception field do not hold on to a reference to the Date object. A script that modifies a Date object so retrieved cannot affect the platform object it was retrieved from.S
+    }
 
-		//If V is the undefined Date value, then return a newly constructed ECMAScript Date object whose time value is NaN.
-		//Otherwise, return a newly constructed ECMAScript Date object that represents the same millisecond as V.
-	//Platform objects returning an ECMAScript Date object from attributes, operations or exception field do not hold on to a reference to the Date object. A script that modifies a Date object so retrieved cannot affect the platform object it was retrieved from.S
-	}
-	
-	
-	
-	
     function classType(O) {
         var oType = ECMAScript.Type(O)
         var classType;
@@ -482,32 +452,26 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
             }
         }
     }
-        /*
+    /*
 		3.10. Types
 		http://dev.w3.org/2006/webapi/WebIDL/#idl-types
         */
-        
-		/*
+    /*
 		Helper base class 
 		*/
-		function WebIDLBase(typeName){
-			 var props = {
-			        get: function() {
-			            return typeName
-			        }
-			}
-			Object.defineProperty(this, "typeName", props);
-		}
-		
-		
-     //The following types are known as integer types: byte, octet, short, unsigned short, long, unsigned long, long long and unsigned long long.
-       var integerTypes = [];
-
-       //primitive types: boolean, the integer types, float, unresticted float, double and unrestricted double.
-       var primitiveTypes = [];
-   		
-
-		/*
+    function WebIDLBase(typeName) {
+        var props = {
+            get: function () {
+                return typeName
+            }
+        }
+        Object.defineProperty(this, "typeName", props);
+    }
+    //The following types are known as integer types: byte, octet, short, unsigned short, long, unsigned long, long long and unsigned long long.
+    var integerTypes = [];
+    //primitive types: boolean, the integer types, float, unresticted float, double and unrestricted double.
+    var primitiveTypes = [];
+    /*
 		3.10.1. any
 		The any type is the union of all other possible non-union types. Its type name is “Any”.
 
@@ -515,169 +479,149 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
 
 		The particular type of an any value is known as its specific type. (Values of union types also have specific types.)
 		*/
-	
-		function WebIDLAny(value) {
-		   this.prototype.constructor.call(this,"Any")
-		} 
-		WebIDLAny.prototype = WebIDLBase; 
-
-		
-		/*
+    function WebIDLAny(value) {
+        this.prototype.constructor.call(this, "Any")
+    }
+    WebIDLAny.prototype = WebIDLBase;
+    /*
 		3.10.2. boolean
 		The boolean type has two values: true and false.
 		boolean constant values in IDL are represented with the true and false tokens.
 		The type name of the boolean type is “Boolean”.
 		*/
-		function WebIDLBoolean(value) {
-		   if(value !== true || value !== false){
-			   throw TypeError("The boolean type has two values: true and false."); 	
-		   }
-		   this.prototype.constructor.call(this,"Boolean")
-		} 
-		WebIDLBoolean.prototype = WebIDLBase; 
-		
-		
-		/*
+    function WebIDLBoolean(value) {
+        if (value !== true || value !== false) {
+            throw TypeError("The boolean type has two values: true and false.");
+        }
+        this.prototype.constructor.call(this, "Boolean")
+    }
+    WebIDLBoolean.prototype = WebIDLBase;
+    /*
 		The byte type is a signed integer type that has values in the range [-128, 127].
 		byte constant values in IDL are represented with integer tokens.
 		The type name of the byte type is “Byte”.
 		*/
-		
-		function WebIDLByte(){
-			var valueRestriction = [-128, 127]; 
-			this.prototype.constructor.call(this,"Byte");
-		}
-		WebIDLByte.prototype = WebIDLBase; 
-
-		/*
+    function WebIDLByte() {
+        var valueRestriction = [-128, 127];
+        this.prototype.constructor.call(this, "Byte");
+    }
+    WebIDLByte.prototype = WebIDLBase;
+    /*
 		3.10.4. octet
 		The octet type is an unsigned integer type that has values in the range [0, 255].
 		octet constant values in IDL are represented with integer tokens.
 		The type name of the octet type is “Octet”.
 		*/
-		function WebIDLByte(){
-			var valueRestriction = [0, 255]; 
-			this.prototype.constructor.call(this,"Octet");
-		}
-		WebIDLByte.prototype = WebIDLBase;
-	
-		/*
+    function WebIDLByte() {
+        var valueRestriction = [0, 255];
+        this.prototype.constructor.call(this, "Octet");
+    }
+    WebIDLByte.prototype = WebIDLBase;
+    /*
 		3.10.5. short
 		The short type is a signed integer type that has values in the range [-32768, 32767].
 		short constant values in IDL are represented with integer tokens.
 		The type name of the short type is “Short”.
 		*/
-		function WebIDLShort(){
-			var valueRestriction = [-32768, 32767]; 
-			this.prototype.constructor.call(this,"Short");
-		}
-		WebIDLShort.prototype = WebIDLBase;
-		
-		/*
+    function WebIDLShort() {
+        var valueRestriction = [-32768, 32767];
+        this.prototype.constructor.call(this, "Short");
+    }
+    WebIDLShort.prototype = WebIDLBase;
+    /*
 		3.10.6. unsigned short
 		The unsigned short type is an unsigned integer type that has values in the range [0, 65535].
 		unsigned short constant values in IDL are represented with integer tokens.
 		The type name of the unsigned short type is “UnsignedShort”.
 		*/
-		function WebIDLUnsignedShort(){
-			var valueRestriction = [0, 65535]; 
-			this.prototype.constructor.call(this,"UnsignedShort");
-		}
-		WebIDLUnsignedShort.prototype = WebIDLBase;
-		
-		/*
+    function WebIDLUnsignedShort() {
+        var valueRestriction = [0, 65535];
+        this.prototype.constructor.call(this, "UnsignedShort");
+    }
+    WebIDLUnsignedShort.prototype = WebIDLBase;
+    /*
 		3.10.7. long
 		The long type is a signed integer type that has values in the range [-2147483648, 2147483647].
 		long constant values in IDL are represented with integer tokens.
 		The type name of the long type is “Long”.
 		*/
-		function WebIDLLong(){
-			var valueRestriction = [-2147483648, 2147483647]; 
-			this.prototype.constructor.call(this,"Long");
-		}
-		WebIDLUnsignedShort.prototype = WebIDLBase;
-		
-		/*
+    function WebIDLLong() {
+        var valueRestriction = [-2147483648, 2147483647];
+        this.prototype.constructor.call(this, "Long");
+    }
+    WebIDLUnsignedShort.prototype = WebIDLBase;
+    /*
 		3.10.8. unsigned long
 		The unsigned long type is an unsigned integer type that has values in the range [0, 4294967295].
 		unsigned long constant values in IDL are represented with integer tokens.
 		The type name of the unsigned long type is “UnsignedLong”.
 		*/
-		function WebIDLUnsignedLong(){
-			var valueRestriction = [0, 4294967295]; 
-			this.prototype.constructor.call(this,"UnsignedLong");
-		}
-		WebIDLUnsignedLong.prototype = WebIDLBase;
-		
-		
-		/*
+    function WebIDLUnsignedLong() {
+        var valueRestriction = [0, 4294967295];
+        this.prototype.constructor.call(this, "UnsignedLong");
+    }
+    WebIDLUnsignedLong.prototype = WebIDLBase;
+    /*
 		3.10.9. long long
 		The long long type is a signed integer type that has values in the range [-9223372036854775808, 9223372036854775807].
 		long long constant values in IDL are represented with integer tokens.
 		The type name of the long long type is “LongLong”.
 		*/
-		function WebIDLLongLong(){
-			var valueRestriction = [-9223372036854775808, 9223372036854775807]; 
-			this.prototype.constructor.call(this,"LongLong");
-		}
-		WebIDLLongLong.prototype = WebIDLBase;
-		
-		/*
+    function WebIDLLongLong() {
+        var valueRestriction = [-9223372036854775808, 9223372036854775807];
+        this.prototype.constructor.call(this, "LongLong");
+    }
+    WebIDLLongLong.prototype = WebIDLBase;
+    /*
 		3.10.10. unsigned long long
 		The unsigned long long type is an unsigned integer type that has values in the range [0, 18446744073709551615].
 		unsigned long long constant values in IDL are represented with integer tokens.
 		The type name of the unsigned long long type is “UnsignedLongLong”.
 		*/
-		function WebIDLUnsignedLongLong(){
-			var valueRestriction = [0, 18446744073709551615]; 
-			this.prototype.constructor.call(this,"UnsignedLongLong");
-		}
-		WebIDLUnsignedLongLong.prototype = WebIDLBase;
-		
-		
-		/*
+    function WebIDLUnsignedLongLong() {
+        var valueRestriction = [0, 18446744073709551615];
+        this.prototype.constructor.call(this, "UnsignedLongLong");
+    }
+    WebIDLUnsignedLongLong.prototype = WebIDLBase;
+    /*
 		3.10.11. float
 		The float type is a floating point numeric type that corresponds to the set of 
 		finite single-precision 32 bit IEEE 754 floating point numbers. [IEEE-754]
 		float constant values in IDL are represented with float tokens.
 		The type name of the float type is “Float”.
 		*/
-		function WebIDLFloat(){
-			//TODO: http://en.wikipedia.org/wiki/Single_precision_floating-point_format
-			this.prototype.constructor.call(this,"Float");
-		}
-		WebIDLFloat.prototype = WebIDLBase;
-		
-		/*
+    function WebIDLFloat() {
+        //TODO: http://en.wikipedia.org/wiki/Single_precision_floating-point_format
+        this.prototype.constructor.call(this, "Float");
+    }
+    WebIDLFloat.prototype = WebIDLBase;
+    /*
 		3.10.13. double §
 		The double type is a floating point numeric type that corresponds to the set of finite 
 		double-precision 64 bit IEEE 754 floating point numbers. [IEEE-754]
 		double constant values in IDL are represented with float tokens.
 		The type name of the double type is “Double”.
 		*/
-		function WebIDLDouble(){
-			throw "Not Supported"; 
-			//TODO: http://en.wikipedia.org/wiki/Single_precision_floating-point_format
-			this.prototype.constructor.call(this,"Double");
-		}
-		WebIDLDouble.prototype = WebIDLBase;
-		
-		
-		/*
+    function WebIDLDouble() {
+        throw "Not Supported";
+        //TODO: http://en.wikipedia.org/wiki/Single_precision_floating-point_format
+        this.prototype.constructor.call(this, "Double");
+    }
+    WebIDLDouble.prototype = WebIDLBase;
+    /*
 		3.10.14. unrestricted double
 		The unrestricted double type is a floating point numeric type that corresponds to the set of all 
 		possible double-precision 32 bit IEEE 754 floating point numbers, finite and non-finite. [IEEE-754]
 		unrestricted double constant values in IDL are represented with float tokens.
 		The type name of the unrestricted double type is “UnrestrictedDouble”.
 		*/
-		function WebIDLUnrestrictedDouble(){
-			throw "Not Supported"; 
-			//TODO: http://en.wikipedia.org/wiki/Single_precision_floating-point_format
-			this.prototype.constructor.call(this,"UnrestrictedDouble");
-		}
-		WebIDLUnrestrictedDouble.prototype = WebIDLBase;
-		
-		/*
+    function WebIDLUnrestrictedDouble() {
+        throw "Not Supported";
+        //TODO: http://en.wikipedia.org/wiki/Single_precision_floating-point_format
+        this.prototype.constructor.call(this, "UnrestrictedDouble");
+    }
+    WebIDLUnrestrictedDouble.prototype = WebIDLBase;
+    /*
 		3.10.15. DOMString
 		The DOMString type corresponds to the set of all possible sequences of code units. Such sequences are commonly interpreted as UTF-16 encoded strings
 		[RFC2781] although this is not required. While DOMString is defined to be an OMG IDL boxed sequence<unsigned short> valuetype in DOM Level 3 Core
@@ -689,9 +633,8 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
 		Note
 		Note also that null is not a value of type DOMString. To allow null, a nullable DOMString, written as DOMString? in IDL, needs to be used.
 		*/
-		
-		function WebIDLDOMString(value){
-			/*
+    function WebIDLDOMString(value) {
+        /*
 			Nothing in this specification requires a DOMString value to be a valid UTF-16 string. 
 			For example, a DOMString value might include unmatched surrogate
 			pair characters. However, authors of specifications using Web IDL might want to obtain a 
@@ -701,84 +644,78 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
 			The following algorithm defines a way to convert a DOMString to a sequence of Unicode characters:
 			Let S be the DOMString value.
 			*/
-			var value = convertToUnicode(value); 
-			this.prototype.constructor.call(this,"String");
+        var value = convertToUnicode(value);
+        this.prototype.constructor.call(this, "String");
 
-			function convertToUnicode(S){
-				//Let n be the length of S.
-				var n = S.length;
-				//Initialize i to 0.
-				var i = 0; 
-
-				//Initialize U to be an empty sequence of Unicode characters.
-				var U = []; 
-
-				//While i < n:
-				while(i < n){
-					//Let c be the code unit in S at index i.
-					var c = Number("0x" + S[i].charCodeAt().toString(16)); 
-					//Depending on the value of c:
-
-					//c < 0xD800 or c > 0xDFFF
-					if( c < 0xD800 || c > 0xDFFF ){
-						//Append to U the Unicode character with code point c.
-						U.push(String.fromCharCode(c));  
-					}else if(0xDC00 <= c <= 0xDFFF){
-						//Append to U a U+FFFD REPLACEMENT CHARACTER.
-						U.push("\uFFFD"); 
-					}else if(0xD800 <= c <= 0xDBFF){
-						//If i = n-1, then append to U a U+FFFD REPLACEMENT CHARACTER.
-						if(i = n-1){
-							U.push("\uFFFD"); 
-						//Otherwise, i < n-1:	
-						}else if(i < n-1){
-							//Let d be the code unit in S at index i+1.
-							var d = Number("0x" + S[i+1].charCodeAt().toString(16)); 
-							//If 0xDC00 ≤ d ≤ 0xDFFF, then:
-							if(0xDC00 <= d <= 0xDFFF){
-								//Let a be c & 0x3FF.
-								var a = c & 0x3FF; 
-								//Let b be d & 0x3FF.
-								var b = d & 0x3FF; 
-								//Append to U the Unicode character with code point 216+210a+b.
-								newc = "\u" + (Math.pow(2,16) + Math.pow(2,10) + a + b); 
-								U.push(newc); 
-								//Set i to i+1.
-								i = i + 1; 
-							//Otherwise, d < 0xDC00 or d > 0xDFFF.
-							}else if(d < 0xDC00 || d > 0xDFFF){
-								 //Append to U a U+FFFD REPLACEMENT CHARACTER.
-								U.push("\uFFFD");
-
-							}
-						}   
-					}
-					i = i + 1; 
-				} 	
-				//Return U.
-				return U.join("");			
-			}
-			this.prototype.constructor.call(this,"String");
-			/*
+        function convertToUnicode(S) {
+            //Let n be the length of S.
+            var n = S.length;
+            //Initialize i to 0.
+            var i = 0;
+            //Initialize U to be an empty sequence of Unicode characters.
+            var U = [];
+            //While i < n:
+            while (i < n) {
+                //Let c be the code unit in S at index i.
+                var c = Number("0x" + S[i].charCodeAt().toString(16));
+                //Depending on the value of c:
+                //c < 0xD800 or c > 0xDFFF
+                if (c < 0xD800 || c > 0xDFFF) {
+                    //Append to U the Unicode character with code point c.
+                    U.push(String.fromCharCode(c));
+                } else if (0xDC00 <= c <= 0xDFFF) {
+                    //Append to U a U+FFFD REPLACEMENT CHARACTER.
+                    U.push("\uFFFD");
+                } else if (0xD800 <= c <= 0xDBFF) {
+                    //If i = n-1, then append to U a U+FFFD REPLACEMENT CHARACTER.
+                    if (i = n - 1) {
+                        U.push("\uFFFD");
+                        //Otherwise, i < n-1:	
+                    } else if (i < n - 1) {
+                        //Let d be the code unit in S at index i+1.
+                        var d = Number("0x" + S[i + 1].charCodeAt().toString(16));
+                        //If 0xDC00 ≤ d ≤ 0xDFFF, then:
+                        if (0xDC00 <= d <= 0xDFFF) {
+                            //Let a be c & 0x3FF.
+                            var a = c & 0x3FF;
+                            //Let b be d & 0x3FF.
+                            var b = d & 0x3FF;
+                            //Append to U the Unicode character with code point 216+210a+b.
+                            newc = "\u" + (Math.pow(2, 16) + Math.pow(2, 10) + a + b);
+                            U.push(newc);
+                            //Set i to i+1.
+                            i = i + 1;
+                            //Otherwise, d < 0xDC00 or d > 0xDFFF.
+                        } else if (d < 0xDC00 || d > 0xDFFF) {
+                            //Append to U a U+FFFD REPLACEMENT CHARACTER.
+                            U.push("\uFFFD");
+                        }
+                    }
+                }
+                i = i + 1;
+            }
+            //Return U.
+            return U.join("");
+        }
+        this.prototype.constructor.call(this, "String");
+        /*
 			There is no way to represent a constant DOMString value in IDL, although DOMString dictionary member and operation optional argument default 
 			values an be specified using a string literal.
 			*/
-		}
-		WebIDLDOMString.prototype = WebIDLBase;
-		
-		/*
+    }
+    WebIDLDOMString.prototype = WebIDLBase;
+    /*
 		3.10.16. object
 		The object type corresponds to the set of all possible non-null object references.
 		There is no way to represent a constant object value in IDL.
 		To denote a type that includes all possible object references plus the null value, use the nullable type object?.
 		The type name of the object type is “Object”.
 		*/
-		function WebIDLObject(){
-			this.prototype.constructor.call(this,"Object");
-		}
-		WebIDLObject.prototype = WebIDLBase;
-		
-		/*
+    function WebIDLObject() {
+        this.prototype.constructor.call(this, "Object");
+    }
+    WebIDLObject.prototype = WebIDLBase;
+    /*
 		3.10.25. Date
 		The Date type is a type that represents an instant in time with millisecond accuracy. 
 		The instants in time that this type can represent are the same that can be represented with 
@@ -793,13 +730,11 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
 
 		The type name of the Date type is “Date”.
 		*/
-		function WebIDLDate(){	
-			this.prototype.constructor.call(this,"Date");
-		}
-		WebIDLDate.prototype = WebIDLBase;
-		
-		
- 	/*
+    function WebIDLDate() {
+        this.prototype.constructor.call(this, "Date");
+    }
+    WebIDLDate.prototype = WebIDLBase;
+    /*
 	4. ECMAScript binding
 	http://dev.w3.org/2006/webapi/WebIDL/#ecmascript-binding
 	*/
@@ -809,7 +744,4 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
     var defaultProto = new Object();
 
     function convertAny(ECMAScriptValue) {}
-
 })();
-	
-	
