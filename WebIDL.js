@@ -7,23 +7,59 @@ Distributed under a WTFP License: http://en.wikipedia.org/wiki/WTFPL
 This document reproduces parts of the WebIDL specification as comments. The copyright for
 that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-documents-20021231
 */
-"use strict";
-(function () {
-    //Some aspects of WebIDL can only be implemented when not running in String Mode!
+/*
+Self-calling constructor
+@param globalScope  Object to which WebIDL will be bound
+@param ECMAScript   An implementation of the abstract algorithms of ECMAScript. 
+@param WebIDLParser A WebIDL parser - currently unused
+*/
+(function (scope, ECMAScript, WebIDLParser) {
+    "use strict";
     var WebIDL = Object.create(ECMAScript);
-    ECMAScript.DefineOwnProperty(window, "WebIDL", {
-        value: WebIDL
-    })
-    var publicFunctions = [implement, test, ExceptionFactory];
-    //Expose functions
-    for (var i = 0; i < publicFunctions.length; i++) {
-        var func = publicFunctions[i];
-        var props = WebIDL.createDataProperty(func);
-        WebIDL.DefineOwnProperty(WebIDL, func.name, props, false);
+    initialize();
+    //Initialize WebIDL and bind it to the global scope (normally the window object)
+    function initialize() {
+        /*
+        As soon as any ECMAScript global environment is created, the following steps must be performed:
+        Let F be a function object whose behavior when invoked is as follows:
+        */
+(function F() {
+            //If the this value is undefined, return "[object Undefined]".
+            if (scope === undefined) {
+                return "[object Undefined]";
+            }
+            //If the this value is null, return "[object Null]"
+            if (scope === null) {
+                return "[object Null]";
+            }
+            //    Let O be the result of calling ToObject passing the this value as the argument.
+            var O = ECMAScript.ToObject(scope);
+            //Let class be a string whose value is determined as follows:
+            var classtype = classType(O);
+            //If O is a platform object, interface prototype object or exception interface prototype object,
+            if (classtype === "platform object" || classtype === "interface prototype object" || classtype === "exception interface prototype") {
+                //then class is O’s class string.
+                var prop = ECMAScript.createAccessorProperty(function () {
+                    return classtype
+                });
+                ECMAScript.DefineOwnProperty(O, "classString", prop);
+            }
+        })();
+        //bind to window object
+        Object.defineProperty(scope, "WebIDL", {
+            value: WebIDL
+        })
+        //Expose public functions by attaching them as properties
+        var publicFunctions = [implement, test, ExceptionFactory, classType];
+        for (var i = 0; i < publicFunctions.length; i++) {
+            var func = publicFunctions[i];
+            var props = WebIDL.createDataProperty(func);
+            WebIDL.DefineOwnProperty(WebIDL, func.name, props, false);
+        }
     }
     //function tests conformance of some object to a parsed IDL fragment
     function test(obj, parsedIDL) {
-        "use strict";
+        throw TypeError("Not supported yet.");
     }
     //Function implements an IDL fragement
     function implement(parsedIDL) {
@@ -57,46 +93,19 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
     //Exceptions container
     //Used to contain exception prototypes
     var exceptionPrototypes = {}
-    /*
-	As soon as any ECMAScript global environment is created, the following steps must be performed:
-	*/
-    //Let F be a function object whose behavior when invoked is as follows:
-    var F = function () {
-            "use strict";
-            //If the this value is undefined, return "[object Undefined]".
-            if (this === undefined) {
-                return "[object Undefined]";
-            }
-            //If the this value is null, return "[object Null]"
-            if (this === null) {
-                return "[object Null]";
-            }
-            //	Let O be the result of calling ToObject passing the this value as the argument.
-            var O = ECMAScript.ToObject(this);
-            //Let class be a string whose value is determined as follows:
-            var classType = classType(o);
-            //If O is a platform object, interface prototype object or exception interface prototype object,
-            if (classType === "platform object" || classType === "interface prototype object" || classType === "exception interface prototype") {
-                //then class is O’s class string.
-                var prop = ECMAScript.createAccessorProperty(function () {
-                    return classType
-                })
-                ECMAScript.DefineOwnProperty(O, "classString", prop);
-            }
-        }
 
     function ExceptionFactory(identifier, extendedAttributesList, exceptionMembers, parent) {
         /*There must exist an exception interface prototype object for every exception defined, regardless of whether 
         the exception was declared with the [NoInterfaceObject] extended attribute. The exception interface prototype object 
         for a particular exception has properties that correspond to the constants and exception fields defined on the exception. 
         These properties are described in more detail in sections 4.9.3 and 4.9.4, below.
-    	*/
+        */
         var exceptionInterfacePrototypeObject;
         /*The exception interface prototype object for a given exception must have an internal [[Prototype]] property whose value is as follows:
-		If the exception is declared to inherit from another exception, 
+        If the exception is declared to inherit from another exception, 
         then the value of the internal [[Prototype]] property is the exception interface 
         prototype object for the inherited exception.
-		*/
+        */
         if (parent && ECMAScript.Type(parent) === "Object") {
             exceptionInterfacePrototypeObject = Object.create(parent)
         } else {
@@ -108,7 +117,7 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
         //TODO: The class string of an exception interface prototype object is the concatenation of the exception’s identifier and the string “Prototype”.
         /*There must be a property named “name” on the exception interface prototype object with attributes 
           { [[Writable]]: true, [[Enumerable]]: false, [[Configurable]]: true } and whose value is the identifier of the exception.
-		*/
+        */
         var props = {
             value: identifier,
             writable: true,
@@ -117,20 +126,20 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
         };
         Object.defineProperty(exceptionInterfacePrototypeObject, "name", props);
         /*
-		4.9.1. Exception interface object
-		*/
+        4.9.1. Exception interface object
+        */
         var code = "function " + identifier + "(){ throw new TypeError('Illegal constructor')}";
         var exceptionInterfaceObject = Function('return ' + code)();
         /*
-		If the [NoInterfaceObject] extended attribute was not specified on the exception,
-		*/
+        If the [NoInterfaceObject] extended attribute was not specified on the exception,
+        */
         if (extendedAttributesList.join().search("NoInterfaceObject") === -1) {
             /*
-			 then there must also be a property named “constructor” on the
-			 exception interface prototype object with attributes 
-			 { [[Writable]]: true, [[Enumerable]]: false, [[Configurable]]: true } 
-			 and whose value is a reference to the exception interface object for the exception.
-			 */
+             then there must also be a property named “constructor” on the
+             exception interface prototype object with attributes 
+             { [[Writable]]: true, [[Enumerable]]: false, [[Configurable]]: true } 
+             and whose value is a reference to the exception interface object for the exception.
+             */
             var props = {
                 value: exceptionInterfaceObject,
                 writable: true,
@@ -140,11 +149,11 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
             Object.defineProperty(exceptionInterfacePrototypeObject, "constructor", props);
         }
         /*
-		 The exception interface object must also have a property named “prototype” with attributes
-		 { [[Writable]]: false, [[Enumerable]]: false, [[Configurable]]: false } 
-	 	 whose value is an object called the exception interface prototype object. 
-		 This object also provides access to the constants that are declared on the exception.
-		*/
+         The exception interface object must also have a property named “prototype” with attributes
+         { [[Writable]]: false, [[Enumerable]]: false, [[Configurable]]: false } 
+          whose value is an object called the exception interface prototype object. 
+         This object also provides access to the constants that are declared on the exception.
+        */
         var props = {
             value: exceptionInterfacePrototypeObject,
             writable: false,
@@ -153,11 +162,11 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
         };
         Object.defineProperty(exceptionInterfaceObject, "prototype", props);
         /*
-		4.9.1.1. Exception interface object [[Call]] method
-		The internal [[Call]] method of an exception interface object must behave as follows, 
-		assuming arg0..n-1 is the list of argument values passed to the function, 
-		and E is the exception corresponding to the exception interface object:
-		*/
+        4.9.1.1. Exception interface object [[Call]] method
+        The internal [[Call]] method of an exception interface object must behave as follows, 
+        assuming arg0..n-1 is the list of argument values passed to the function, 
+        and E is the exception corresponding to the exception interface object:
+        */
         function exceptionMaker(arg0) {
             //Let O be a new object whose [[Prototype]] internal property is set to the exception interface object
             var O = Object.create(exceptionInterfaceObject);
@@ -182,12 +191,12 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
         }
         if (extendedAttributesList.join().search("NoInterfaceObject") === -1) {
             /*
-			For every exception that is not declared with the [NoInterfaceObject] extended attribute, 
-			a corresponding property must exist on the ECMAScript global object. The name of the property 
-			is the identifier of the exception, and its value is an object called the exception interface 
-			object, which provides access to any constants that have been associated with the exception. 
-			The property has the attributes { [[Writable]]: true, [[Enumerable]]: false, [[Configurable]]: true }.
-			*/
+            For every exception that is not declared with the [NoInterfaceObject] extended attribute, 
+            a corresponding property must exist on the ECMAScript global object. The name of the property 
+            is the identifier of the exception, and its value is an object called the exception interface 
+            object, which provides access to any constants that have been associated with the exception. 
+            The property has the attributes { [[Writable]]: true, [[Enumerable]]: false, [[Configurable]]: true }.
+            */
             var props = {
                 value: exceptionInterfaceObject,
                 writable: true,
@@ -209,14 +218,14 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
 
         function addConst(obj, name, value, type, extAttrs) {
             /*
-			4.9.3. Constants
-			For each constant defined on the exception, there must be a corresponding property on the exception interface object, if it exists, if the identifier of the constant is not “prototype”. The property has the following characteristics:
+            4.9.3. Constants
+            For each constant defined on the exception, there must be a corresponding property on the exception interface object, if it exists, if the identifier of the constant is not “prototype”. The property has the following characteristics:
 
-			The name of the property is the identifier of the constant.
-			The value of the property is the ECMAScript value that is equivalent to the constant’s IDL value, according to the rules in section 4.2 above.
-			The property has attributes { [[Writable]]: false, [[Enumerable]]: true, [[Configurable]]: false }.
-			In addition, a property with the same characteristics must exist on the exception interface prototype object.
-			*/
+            The name of the property is the identifier of the constant.
+            The value of the property is the ECMAScript value that is equivalent to the constant’s IDL value, according to the rules in section 4.2 above.
+            The property has attributes { [[Writable]]: false, [[Enumerable]]: true, [[Configurable]]: false }.
+            In addition, a property with the same characteristics must exist on the exception interface prototype object.
+            */
             //TODO: convert value
             var result;
             switch (type) {
@@ -300,12 +309,12 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
         };
     }
     /*
-	***** 4.2. ECMASCRIPT TYPE MAPPING ***********
-	This section describes how types in the IDL map to types in ECMAScript.
-	*/
+    ***** 4.2. ECMASCRIPT TYPE MAPPING ***********
+    This section describes how types in the IDL map to types in ECMAScript.
+    */
     /*
-	Figures out the class type of an object, as defined by Web IDL
-	*/
+    Figures out the class type of an object, as defined by Web IDL
+    */
     function toBoolean(V) {
         //Let x be the result of computing ToBoolean(V).
         var x = ECMAScript.ToBoolean(V);
@@ -316,18 +325,18 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
         //and the IDL boolean value false is converted to the ECMAScript false value.
     }
     /*
-	4.2.7. unsigned short
-	An ECMAScript value V is converted to an IDL unsigned short value by running the following algorithm:
-	*/
+    4.2.7. unsigned short
+    An ECMAScript value V is converted to an IDL unsigned short value by running the following algorithm:
+    */
     function toUnsignedShort(V, extAttrs) {
         //Initialize x to ToNumber(V).
         var x = ECMAScript.ToNumber(V);
         /*
-		If the conversion to an IDL value is being performed due to any of the following:
-			V is being assigned to an attribute annotated with the [EnforceRange] extended attribute,
-			V is being passed as an operation argument annotated with the [EnforceRange] extended attribute, or
-			V is being used as the value of dictionary member annotated with the [EnforceRange] extended attribute,
-		*/
+        If the conversion to an IDL value is being performed due to any of the following:
+            V is being assigned to an attribute annotated with the [EnforceRange] extended attribute,
+            V is being passed as an operation argument annotated with the [EnforceRange] extended attribute, or
+            V is being used as the value of dictionary member annotated with the [EnforceRange] extended attribute,
+        */
         if (extAttrs.search("EnforceRange") > -1) {
             //If x is NaN, +∞, or -∞, then throw a TypeError.
             if (x === NaN || x === +Infinity || x === -Infinity) {
@@ -348,9 +357,9 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
         return x;
     }
     /*
-	4.2.12. float
-	An ECMAScript value V is converted to an IDL float value by running the following algorithm:
-	*/
+    4.2.12. float
+    An ECMAScript value V is converted to an IDL float value by running the following algorithm:
+    */
     function toFloat(V) {
         //Let x be ToNumber(V).
         var x = ECMAScript.ToNumber(V);
@@ -368,10 +377,10 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
         //The result of converting an IDL float value to an ECMAScript value is the Number value that represents the same numeric value as the IDL float value.
     }
     /*
-	4.2.17. object
-	IDL object values are represented by ECMAScript Object values.
-	An ECMAScript value V is converted to an IDL object value by running the following algorithm:
-	*/
+    4.2.17. object
+    IDL object values are represented by ECMAScript Object values.
+    An ECMAScript value V is converted to an IDL object value by running the following algorithm:
+    */
     function toObject(V) {
         //If Type(V) is not Object, then throw a TypeError.
         if (ECMAScript.Type(v) !== "Object") {
@@ -382,10 +391,10 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
         //The result of converting an IDL object value to an ECMAScript value is the Object value that represents a reference to the same object that the IDL object represents.
     }
     /*
-	4.2.18. Interface types
-	IDL interface type values are represented by ECMAScript Object or Function values.
-	An ECMAScript value V is converted to an IDL interface type value by running the following algorithm (where I is the interface):
-	*/
+    4.2.18. Interface types
+    IDL interface type values are represented by ECMAScript Object or Function values.
+    An ECMAScript value V is converted to an IDL interface type value by running the following algorithm (where I is the interface):
+    */
     function toInterface(V, I) {
         //If Type(V) is not Object, then throw a TypeError.
         if (ECMAScript.Type(V !== "Object")) {
@@ -398,10 +407,10 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
         //The result of converting an IDL interface type value to an ECMAScript value is the Object value that represents a reference to the same object that the IDL interface type value represents.
     }
     /*
-	4.2.26. Date
-	IDL Date values are represented by ECMAScript Date objects.
-	An ECMAScript value V is converted to an IDL Date value by running the following algorithm:
-	*/
+    4.2.26. Date
+    IDL Date values are represented by ECMAScript Date objects.
+    An ECMAScript value V is converted to an IDL Date value by running the following algorithm:
+    */
     function toDate(V) {
         //If V is not an ECMAScript Date object, then throw a TypeError.
         if (V instanceof Date === false) {}
@@ -416,49 +425,51 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
 
     function classType(O) {
         var oType = ECMAScript.Type(O)
-        var classType;
-        //check platform object
-        if (oType === "Function") {
-            var name = O.name;
-            var nativeString = "function " + name + "() { [native code] }";
-            if (O.toString() === nativeString) {
-                classType = "platform object";
-                return classType;
-            }
-        }
-        /*
-		 The exception interface object must also have a property named “prototype” with attributes
-		 { [[Writable]]: false, [[Enumerable]]: false, [[Configurable]]: false } whose value is an 
-		 object called the exception interface prototype object. 
-		 This object also provides access to the constants that are declared on the exception.
-		*/
-        if (O instanceof Error) {
-            classType = "Exception";
-        }
-        if (O.hasOwnProperty("prototype")) {
-            /*
-			  Interface prototype object
-			  The interface object for a non-callback interface 
-			  must also have a property named “prototype” with attributes
-			  { [[Writable]]: false, [[Enumerable]]: false, [[Configurable]]: false } 
-			  whose value is an object called the interface prototype object.
-			*/
-            if (oType === "Object") {
+        //check if it's "platform object" (native code)
+        //or an user interface object
+        if (oType === "Object") {
+            if (O.hasOwnProperty && O.hasOwnProperty("prototype")) {
+                /*
+                  Interface prototype object
+                  The interface object for a non-callback interface 
+                  must also have a property named “prototype” with attributes
+                  { [[Writable]]: false, [[Enumerable]]: false, [[Configurable]]: false } 
+                  whose value is an object called the interface prototype object.
+                */
                 var protoProps = Object.getOwnPropertyDescriptor(O, "prototype");
                 if (protoProps.writable === false && protoProps.enumerable === false && protoProps.configurable === false) {
-                    classType = "interface prototype object";
-                    return classType;
+                    //In Chrome, error is not a prototype of itself, it has a special prototype "ErrorPrototype"
+                    if (O === Error && O.prototype.name === "Error" || O.prototype instanceof Error) {
+                        return "exception interface prototype";
+                    }
+                    return "interface prototype object";
+                }
+                //it's then a user object interface
+                if (protoProps.writable === true && protoProps.enumerable === false && protoProps.configurable === false) {
+                    return "user interface object";
                 }
             }
+            if (O.constructor && ECMAScript.IsCallable(O.constructor.toString)) {
+                var name = O.constructor.name;
+                var testConst = "function " + name + "() { [native code] }"
+                var nativeConst = O.constructor.toString();
+                //check if the constructor is native code
+                if (testConst === nativeConst) {
+                    return "platform object";
+                }
+            }
+            return "user object";
         }
+        //it's not an object, so just return the type
+        return oType;
     }
     /*
-		3.10. Types
-		http://dev.w3.org/2006/webapi/WebIDL/#idl-types
+        3.10. Types
+        http://dev.w3.org/2006/webapi/WebIDL/#idl-types
         */
     /*
-		Helper base class 
-		*/
+        Helper base class 
+        */
     function WebIDLBase(typeName) {
         var props = {
             get: function () {
@@ -472,23 +483,23 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
     //primitive types: boolean, the integer types, float, unresticted float, double and unrestricted double.
     var primitiveTypes = [];
     /*
-		3.10.1. any
-		The any type is the union of all other possible non-union types. Its type name is “Any”.
+        3.10.1. any
+        The any type is the union of all other possible non-union types. Its type name is “Any”.
 
-		The any type is like a discriminated union type, in that each of its values has a specific non-any type associated with it. For example, one value of the any type is the unsigned long 150, while another is the long 150. These are distinct values.
+        The any type is like a discriminated union type, in that each of its values has a specific non-any type associated with it. For example, one value of the any type is the unsigned long 150, while another is the long 150. These are distinct values.
 
-		The particular type of an any value is known as its specific type. (Values of union types also have specific types.)
-		*/
+        The particular type of an any value is known as its specific type. (Values of union types also have specific types.)
+        */
     function WebIDLAny(value) {
         this.prototype.constructor.call(this, "Any")
     }
     WebIDLAny.prototype = WebIDLBase;
     /*
-		3.10.2. boolean
-		The boolean type has two values: true and false.
-		boolean constant values in IDL are represented with the true and false tokens.
-		The type name of the boolean type is “Boolean”.
-		*/
+        3.10.2. boolean
+        The boolean type has two values: true and false.
+        boolean constant values in IDL are represented with the true and false tokens.
+        The type name of the boolean type is “Boolean”.
+        */
     function WebIDLBoolean(value) {
         if (value !== true || value !== false) {
             throw TypeError("The boolean type has two values: true and false.");
@@ -497,111 +508,111 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
     }
     WebIDLBoolean.prototype = WebIDLBase;
     /*
-		The byte type is a signed integer type that has values in the range [-128, 127].
-		byte constant values in IDL are represented with integer tokens.
-		The type name of the byte type is “Byte”.
-		*/
+        The byte type is a signed integer type that has values in the range [-128, 127].
+        byte constant values in IDL are represented with integer tokens.
+        The type name of the byte type is “Byte”.
+        */
     function WebIDLByte() {
         var valueRestriction = [-128, 127];
         this.prototype.constructor.call(this, "Byte");
     }
     WebIDLByte.prototype = WebIDLBase;
     /*
-		3.10.4. octet
-		The octet type is an unsigned integer type that has values in the range [0, 255].
-		octet constant values in IDL are represented with integer tokens.
-		The type name of the octet type is “Octet”.
-		*/
+        3.10.4. octet
+        The octet type is an unsigned integer type that has values in the range [0, 255].
+        octet constant values in IDL are represented with integer tokens.
+        The type name of the octet type is “Octet”.
+        */
     function WebIDLByte() {
         var valueRestriction = [0, 255];
         this.prototype.constructor.call(this, "Octet");
     }
     WebIDLByte.prototype = WebIDLBase;
     /*
-		3.10.5. short
-		The short type is a signed integer type that has values in the range [-32768, 32767].
-		short constant values in IDL are represented with integer tokens.
-		The type name of the short type is “Short”.
-		*/
+        3.10.5. short
+        The short type is a signed integer type that has values in the range [-32768, 32767].
+        short constant values in IDL are represented with integer tokens.
+        The type name of the short type is “Short”.
+        */
     function WebIDLShort() {
         var valueRestriction = [-32768, 32767];
         this.prototype.constructor.call(this, "Short");
     }
     WebIDLShort.prototype = WebIDLBase;
     /*
-		3.10.6. unsigned short
-		The unsigned short type is an unsigned integer type that has values in the range [0, 65535].
-		unsigned short constant values in IDL are represented with integer tokens.
-		The type name of the unsigned short type is “UnsignedShort”.
-		*/
+        3.10.6. unsigned short
+        The unsigned short type is an unsigned integer type that has values in the range [0, 65535].
+        unsigned short constant values in IDL are represented with integer tokens.
+        The type name of the unsigned short type is “UnsignedShort”.
+        */
     function WebIDLUnsignedShort() {
         var valueRestriction = [0, 65535];
         this.prototype.constructor.call(this, "UnsignedShort");
     }
     WebIDLUnsignedShort.prototype = WebIDLBase;
     /*
-		3.10.7. long
-		The long type is a signed integer type that has values in the range [-2147483648, 2147483647].
-		long constant values in IDL are represented with integer tokens.
-		The type name of the long type is “Long”.
-		*/
+        3.10.7. long
+        The long type is a signed integer type that has values in the range [-2147483648, 2147483647].
+        long constant values in IDL are represented with integer tokens.
+        The type name of the long type is “Long”.
+        */
     function WebIDLLong() {
         var valueRestriction = [-2147483648, 2147483647];
         this.prototype.constructor.call(this, "Long");
     }
     WebIDLUnsignedShort.prototype = WebIDLBase;
     /*
-		3.10.8. unsigned long
-		The unsigned long type is an unsigned integer type that has values in the range [0, 4294967295].
-		unsigned long constant values in IDL are represented with integer tokens.
-		The type name of the unsigned long type is “UnsignedLong”.
-		*/
+        3.10.8. unsigned long
+        The unsigned long type is an unsigned integer type that has values in the range [0, 4294967295].
+        unsigned long constant values in IDL are represented with integer tokens.
+        The type name of the unsigned long type is “UnsignedLong”.
+        */
     function WebIDLUnsignedLong() {
         var valueRestriction = [0, 4294967295];
         this.prototype.constructor.call(this, "UnsignedLong");
     }
     WebIDLUnsignedLong.prototype = WebIDLBase;
     /*
-		3.10.9. long long
-		The long long type is a signed integer type that has values in the range [-9223372036854775808, 9223372036854775807].
-		long long constant values in IDL are represented with integer tokens.
-		The type name of the long long type is “LongLong”.
-		*/
+        3.10.9. long long
+        The long long type is a signed integer type that has values in the range [-9223372036854775808, 9223372036854775807].
+        long long constant values in IDL are represented with integer tokens.
+        The type name of the long long type is “LongLong”.
+        */
     function WebIDLLongLong() {
         var valueRestriction = [-9223372036854775808, 9223372036854775807];
         this.prototype.constructor.call(this, "LongLong");
     }
     WebIDLLongLong.prototype = WebIDLBase;
     /*
-		3.10.10. unsigned long long
-		The unsigned long long type is an unsigned integer type that has values in the range [0, 18446744073709551615].
-		unsigned long long constant values in IDL are represented with integer tokens.
-		The type name of the unsigned long long type is “UnsignedLongLong”.
-		*/
+        3.10.10. unsigned long long
+        The unsigned long long type is an unsigned integer type that has values in the range [0, 18446744073709551615].
+        unsigned long long constant values in IDL are represented with integer tokens.
+        The type name of the unsigned long long type is “UnsignedLongLong”.
+        */
     function WebIDLUnsignedLongLong() {
         var valueRestriction = [0, 18446744073709551615];
         this.prototype.constructor.call(this, "UnsignedLongLong");
     }
     WebIDLUnsignedLongLong.prototype = WebIDLBase;
     /*
-		3.10.11. float
-		The float type is a floating point numeric type that corresponds to the set of 
-		finite single-precision 32 bit IEEE 754 floating point numbers. [IEEE-754]
-		float constant values in IDL are represented with float tokens.
-		The type name of the float type is “Float”.
-		*/
+        3.10.11. float
+        The float type is a floating point numeric type that corresponds to the set of 
+        finite single-precision 32 bit IEEE 754 floating point numbers. [IEEE-754]
+        float constant values in IDL are represented with float tokens.
+        The type name of the float type is “Float”.
+        */
     function WebIDLFloat() {
         //TODO: http://en.wikipedia.org/wiki/Single_precision_floating-point_format
         this.prototype.constructor.call(this, "Float");
     }
     WebIDLFloat.prototype = WebIDLBase;
     /*
-		3.10.13. double §
-		The double type is a floating point numeric type that corresponds to the set of finite 
-		double-precision 64 bit IEEE 754 floating point numbers. [IEEE-754]
-		double constant values in IDL are represented with float tokens.
-		The type name of the double type is “Double”.
-		*/
+        3.10.13. double §
+        The double type is a floating point numeric type that corresponds to the set of finite 
+        double-precision 64 bit IEEE 754 floating point numbers. [IEEE-754]
+        double constant values in IDL are represented with float tokens.
+        The type name of the double type is “Double”.
+        */
     function WebIDLDouble() {
         throw "Not Supported";
         //TODO: http://en.wikipedia.org/wiki/Single_precision_floating-point_format
@@ -609,12 +620,12 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
     }
     WebIDLDouble.prototype = WebIDLBase;
     /*
-		3.10.14. unrestricted double
-		The unrestricted double type is a floating point numeric type that corresponds to the set of all 
-		possible double-precision 32 bit IEEE 754 floating point numbers, finite and non-finite. [IEEE-754]
-		unrestricted double constant values in IDL are represented with float tokens.
-		The type name of the unrestricted double type is “UnrestrictedDouble”.
-		*/
+        3.10.14. unrestricted double
+        The unrestricted double type is a floating point numeric type that corresponds to the set of all 
+        possible double-precision 32 bit IEEE 754 floating point numbers, finite and non-finite. [IEEE-754]
+        unrestricted double constant values in IDL are represented with float tokens.
+        The type name of the unrestricted double type is “UnrestrictedDouble”.
+        */
     function WebIDLUnrestrictedDouble() {
         throw "Not Supported";
         //TODO: http://en.wikipedia.org/wiki/Single_precision_floating-point_format
@@ -622,28 +633,28 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
     }
     WebIDLUnrestrictedDouble.prototype = WebIDLBase;
     /*
-		3.10.15. DOMString
-		The DOMString type corresponds to the set of all possible sequences of code units. Such sequences are commonly interpreted as UTF-16 encoded strings
-		[RFC2781] although this is not required. While DOMString is defined to be an OMG IDL boxed sequence<unsigned short> valuetype in DOM Level 3 Core
-		([DOM3CORE], section 1.2.1), this document defines DOMString to be an intrinsic type so as to avoid special casing that sequence type in various
-		situations where a string is required. 
-		
-		The type name of the DOMString type is “String”.
+        3.10.15. DOMString
+        The DOMString type corresponds to the set of all possible sequences of code units. Such sequences are commonly interpreted as UTF-16 encoded strings
+        [RFC2781] although this is not required. While DOMString is defined to be an OMG IDL boxed sequence<unsigned short> valuetype in DOM Level 3 Core
+        ([DOM3CORE], section 1.2.1), this document defines DOMString to be an intrinsic type so as to avoid special casing that sequence type in various
+        situations where a string is required. 
+        
+        The type name of the DOMString type is “String”.
 
-		Note
-		Note also that null is not a value of type DOMString. To allow null, a nullable DOMString, written as DOMString? in IDL, needs to be used.
-		*/
+        Note
+        Note also that null is not a value of type DOMString. To allow null, a nullable DOMString, written as DOMString? in IDL, needs to be used.
+        */
     function WebIDLDOMString(value) {
         /*
-			Nothing in this specification requires a DOMString value to be a valid UTF-16 string. 
-			For example, a DOMString value might include unmatched surrogate
-			pair characters. However, authors of specifications using Web IDL might want to obtain a 
-			sequence of Unicode characters given a particular sequence of
-			code units. 
+            Nothing in this specification requires a DOMString value to be a valid UTF-16 string. 
+            For example, a DOMString value might include unmatched surrogate
+            pair characters. However, authors of specifications using Web IDL might want to obtain a 
+            sequence of Unicode characters given a particular sequence of
+            code units. 
 
-			The following algorithm defines a way to convert a DOMString to a sequence of Unicode characters:
-			Let S be the DOMString value.
-			*/
+            The following algorithm defines a way to convert a DOMString to a sequence of Unicode characters:
+            Let S be the DOMString value.
+            */
         var value = convertToUnicode(value);
         this.prototype.constructor.call(this, "String");
 
@@ -670,7 +681,7 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
                     //If i = n-1, then append to U a U+FFFD REPLACEMENT CHARACTER.
                     if (i = n - 1) {
                         U.push("\uFFFD");
-                        //Otherwise, i < n-1:	
+                        //Otherwise, i < n-1:    
                     } else if (i < n - 1) {
                         //Let d be the code unit in S at index i+1.
                         var d = Number("0x" + S[i + 1].charCodeAt().toString(16));
@@ -699,49 +710,59 @@ that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-docum
         }
         this.prototype.constructor.call(this, "String");
         /*
-			There is no way to represent a constant DOMString value in IDL, although DOMString dictionary member and operation optional argument default 
-			values an be specified using a string literal.
-			*/
+            There is no way to represent a constant DOMString value in IDL, although DOMString dictionary member and operation optional argument default 
+            values an be specified using a string literal.
+            */
     }
     WebIDLDOMString.prototype = WebIDLBase;
     /*
-		3.10.16. object
-		The object type corresponds to the set of all possible non-null object references.
-		There is no way to represent a constant object value in IDL.
-		To denote a type that includes all possible object references plus the null value, use the nullable type object?.
-		The type name of the object type is “Object”.
-		*/
+    3.10.16. object
+    The object type corresponds to the set of all possible non-null object references.
+    There is no way to represent a constant object value in IDL.
+    To denote a type that includes all possible object references plus the null value, use the nullable type object?.
+    The type name of the object type is “Object”.
+    */
     function WebIDLObject() {
         this.prototype.constructor.call(this, "Object");
     }
     WebIDLObject.prototype = WebIDLBase;
     /*
-		3.10.25. Date
-		The Date type is a type that represents an instant in time with millisecond accuracy. 
-		The instants in time that this type can represent are the same that can be represented with 
-		ECMAScript Date objects ([ECMA-262], section 15.9.1.1) – namely, every millisecond in the 
-		200,000,000 days centered around midnight of 1 January, 1970 UTC, except for any millisecond 
-		that is part of an inserted leap second, because they cannot be represented by this type.
+     3.10.25. Date
+     The Date type is a type that represents an instant in time with millisecond accuracy. 
+     The instants in time that this type can represent are the same that can be represented with 
+     ECMAScript Date objects ([ECMA-262], section 15.9.1.1) – namely, every millisecond in the 
+     200,000,000 days centered around midnight of 1 January, 1970 UTC, except for any millisecond 
+     that is part of an inserted leap second, because they cannot be represented by this type.
 
-		An additional value that this type can represent is one that indicates an indeterminate 
-		or undefined time, which we write as undefined.
+     An additional value that this type can represent is one that indicates an indeterminate 
+     or undefined time, which we write as undefined.
 
-		There is no way to represent a constant Date value in IDL.
+     There is no way to represent a constant Date value in IDL.
 
-		The type name of the Date type is “Date”.
-		*/
+     The type name of the Date type is “Date”.
+    */
     function WebIDLDate() {
         this.prototype.constructor.call(this, "Date");
     }
     WebIDLDate.prototype = WebIDLBase;
     /*
-	4. ECMAScript binding
-	http://dev.w3.org/2006/webapi/WebIDL/#ecmascript-binding
-	*/
+    4. ECMAScript binding
+    http://dev.w3.org/2006/webapi/WebIDL/#ecmascript-binding
+    */
     //Unless otherwise specified, the [[Extensible]] internal property of objects defined in this section has the value true.
     var extensible = true;
     //Unless otherwise specified, the [[Prototype]] internal property of objects defined in this section is the Object prototype object.
     var defaultProto = new Object();
 
     function convertAny(ECMAScriptValue) {}
+})(window, ECMAScript);
+/*tests*/ (function () {
+    var predefined_exceptions = [Error, EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError]
+    for (var i = 0; i < predefined_exceptions.length; i++) {
+        var e = predefined_exceptions[i];
+        console.log(WebIDL.classType(e) === "exception interface prototype")
+    }
+    for (i in window) {
+        console.log(i + " is a: " + WebIDL.classType(window[i]))
+    }
 })();
