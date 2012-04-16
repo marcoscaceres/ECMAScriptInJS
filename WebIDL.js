@@ -1,63 +1,116 @@
-/*
-Reference implementation of WebIDL
+/**
+ *Reference implementation of WebIDL 
+ *This application is (will be!) able to both "implement" and test if an object
+ *conforms to its WebIDL definition. 
+ *Code (c) Marcos Caceres, 2012 
+ *Distributed under a WTFP License: http://en.wikipedia.org/wiki/WTFPL
+ *
+ *This document reproduces parts of the WebIDL specification as comments. The copyright for
+ *that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-documents-20021231
+ */
+/**
+*Self-calling constructor implements the following interface:
 
-Code (c) Marcos Caceres, 2011
-Distributed under a WTFP License: http://en.wikipedia.org/wiki/WTFPL
+interface WebIDL : ECMAScript {
+    static void   test(string WebIDL, object object); 
+    static Object implement(string WebIDL); 
+};
 
-This document reproduces parts of the WebIDL specification as comments. The copyright for
-that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-documents-20021231
-*/
-/*
-Self-calling constructor
 @param globalScope  Object to which WebIDL will be bound
 @param ECMAScript   An implementation of the abstract algorithms of ECMAScript. 
-@param WebIDLParser A WebIDL parser - currently unused
+@param WebIDLParser A WebIDL parser
 */
-(function (scope, ECMAScript, WebIDLParser) {
+(function (globalScope, ECMAScript, WebIDLParser) {
     "use strict";
-    var WebIDL = Object.create(ECMAScript);
+    var WebIDLEnv = this;
+    //Private variables
+    var exceptionPrototypes = {} //Contains exception prototypes
+    var interfaceBuilder = new InterfaceBuilder(globalScope) //implements interfaces 
+    var exceptionBuilder = new ExceptionBuilder(globalScope) //implements exceptions  
+    
+    //toString gets trashed after we initialize, but we sometimes need the native one
+    var nativeToString = Object.prototype.toString;
+    
+    //Fun starts here :) 
     initialize();
-    //Initialize WebIDL and bind it to the global scope (normally the window object)
+    selfImplement();
+    //Implement WebIDL on the global scope
+    function selfImplement() {
+        //implement thyself. 
+        var idl = "interface WebIDL : ECMAScript {" + "   static void   test(string WebIDL, object object);" + "   static object implement(string WebIDL);" + "};"
+        var parsedIDL = WebIDLParser.parse(idl);
+        var hooks = implement(parsedIDL);
+    }
+    //Initialize WebIDL as per spec. 
     function initialize() {
+        
         /*
         As soon as any ECMAScript global environment is created, the following steps must be performed:
         Let F be a function object whose behavior when invoked is as follows:
         */
-(function F() {
+        var F = toString; //defined below, "F" in the spec  
+        //Call the [[DefineOwnProperty]] internal method on P with property name “toString”, 
+        //descriptor { [[Writable]]: true, [[Enumerable]]: false, [[Configurable]]: true, [[Value]]: F } 
+        //and Boolean flag false.
+        var P = Object.prototype;
+        var props = {
+            writable: true,
+            enumerable: false,
+            configurable: true,
+            value: F
+        }
+        Object.defineProperty(P, "toString", props);
+        //we keep a way of getting the [[Class]]... it's only gettable through toString
+        var props = ECMAScript.createAccessorProperty(getClass)
+        Object.defineProperty(P, "__class__", props);
+        var props = ECMAScript.createAccessorProperty(getToString)
+        Object.defineProperty(P, "__string__", props);
+
+        function toString() {
             //If the this value is undefined, return "[object Undefined]".
-            if (scope === undefined) {
+            if (this === undefined) {
                 return "[object Undefined]";
             }
             //If the this value is null, return "[object Null]"
-            if (scope === null) {
+            if (this === null) {
                 return "[object Null]";
             }
-            //    Let O be the result of calling ToObject passing the this value as the argument.
-            var O = ECMAScript.ToObject(scope);
+            //Let O be the result of calling ToObject passing the this value as the argument.
+            var O = ECMAScript.ToObject(this);
             //Let class be a string whose value is determined as follows:
-            var classtype = classType(O);
-            //If O is a platform object, interface prototype object or exception interface prototype object,
-            if (classtype === "platform object" || classtype === "interface prototype object" || classtype === "exception interface prototype") {
+            //If O is a platform object, interface prototype object or 
+            //exception interface prototype object,
+            if (isExceptionInterfacePrototype(O) || isPlatformObj(O) || interfacePrototypeObject()) {
                 //then class is O’s class string.
-                var prop = ECMAScript.createAccessorProperty(function () {
-                    return classtype
-                });
-                ECMAScript.DefineOwnProperty(O, "classString", prop);
+                var _class = O.__class__;
+            } else {
+                //Otherwise, class is the value of the [[Class]] internal property of O.
+                var _class = nativeToString.call(O);
             }
-        })();
-        //bind to window object
-        Object.defineProperty(scope, "WebIDL", {
-            value: WebIDL
-        })
-        //Expose public functions by attaching them as properties
-        var publicFunctions = [implement, test, ExceptionFactory, classType];
-        for (var i = 0; i < publicFunctions.length; i++) {
-            var func = publicFunctions[i];
-            var props = WebIDL.createDataProperty(func);
-            WebIDL.DefineOwnProperty(WebIDL, func.name, props, false);
+            //Return the String value that is the result of concatenating the 
+            //three Strings "[object ", class, and "]".
+            return "[object " + _class + "]";
         }
+
+        function getToString() {
+            //we return "Function's toString(), which was not trashed"
+            if (this.__class__ === "Function") {
+                return this.toString()
+            }
+            return nativeToString.call(this);
+        };
+
+        function getClass() {
+            var classString = nativeToString.call(this).match(/^\[object\s\w+\]/);
+            var classname = classString[0].match(/\s\w*/)[0].trim();
+            return classname;
+        };
     }
-    //function tests conformance of some object to a parsed IDL fragment
+
+    function getClassString(obj) {
+        return "Wee";
+    }
+    //Public function tests conformance of some object to a parsed IDL fragment
     function test(obj, parsedIDL) {
         throw TypeError("Not supported yet.");
     }
@@ -68,128 +121,457 @@ Self-calling constructor
         if (!parsedIDL || typeof parsedIDL !== "object" || !parsedIDL instanceof Array) {
             throw new TypeError("Expected an array of objects to process");
         }
-        //Parsed IDL comes in an array form
+        //Parsed IDL comes in an array form, as a definition can contain multiple fragments
         for (var i = 0; i < parsedIDL.length; i++) {
             var idlFragment = parsedIDL[i];
             if (!idlFragment.type) {
-                console.warm("Can't process fragment without type:", idlFragment);
+                console.log("Can't process fragment without type:", idlFragment);
                 throw new Error("Can't process fragment without type:" + idlFragment + ". See console.");
             }
+            //decompose the parsed fragment
+            var identifier = idlFragment.name || idlFragment.identifier;
+            var extAttrs = (idlFragment.extAttrs) ? idlFragment.extAttrs : [];
+            var members = idlFragment.members;
+            var parent = (idlFragment.inheritance) ? idlFragment.inheritance : undefined;
             switch (idlFragment.type) {
             case ("exception"):
                 {
-                    console.log("got an exception", idlFragment);
-                    var identifier = idlFragment.name || idlFragment.identifier;
-                    var extAttrs = (idlFragment.extAttrs) ? idlFragment.extAttrs : [];
-                    var eMembers = idlFragment.members;
-                    //TODO: Waiting for WebIDL Parser to support extensions
-                    var parent = undefined;
-                    var exception = ExceptionFactory(identifier, extAttrs, eMembers, parent);
+                    console.log("Implementing an exception", idlFragment.name, idlFragment);
+                    var exception = exceptionBuilder.build(identifier, extAttrs, members, parent);
                     impHooks.push(exception);
-                } //exception case
+                    break;
+                }
+            case ("interface"):
+                {
+                    console.log("Implementing an interface", idlFragment.name, idlFragment);
+                    interfaceBuilder.build(identifier, members, parent, extAttrs, false)
+                    break;
+                }
+            case ("callbackinterface"):
+                {
+                    console.log("Implementing an callback", idlFragment.name, idlFragment);
+                    interfaceBuilder.build(identifier, members, parent, extAttrs, true)
+                    break;
+                }
             }
         }
     }
-    //Exceptions container
-    //Used to contain exception prototypes
-    var exceptionPrototypes = {}
 
-    function ExceptionFactory(identifier, extendedAttributesList, exceptionMembers, parent) {
-        /*There must exist an exception interface prototype object for every exception defined, regardless of whether 
+    function InterfaceBuilder(global) {
+        //keep a record of things we made
+        var interfacesBuilt = [];
+        //add public interfaces: 
+        var props = ECMAScript.createDataProperty(build);
+        Object.defineProperty(this, "build", props);
+        
+        
+        //Builds an interface
+        function build(identifier, members, parent, extAttrs, isCallback) {
+            //TODO: Check if it's a callback with constants
+            if (isCallback) {
+                var isCBWithConsts = isCBWithConstants(members);
+            } else {
+                /*
+                There must exist an interface prototype object for every 
+                non-callback interface defined, regardless of whether the interface 
+                was declared with the [NoInterfaceObject] extended attribute.
+                The interface prototype object for a particular interface has properties 
+                that correspond to the attributes and operations defined on that interface.                 
+                */
+                var functionBody = "return function " + identifier + "(){/*prototype object*/}"
+                var interfacePrototypeObject = new Function(functionBody)();
+            }
+            
+            var isNoInterface = isNoInterfaceObj(extAttrs);
+            
+            //if it's not [NoInterfaceObject] and not a callback with constants 
+            if (!isNoInterface && !isCBWithConsts) {
+            	//if it's not a callback 
+                if (!isCallback) {
+                    /*
+                    a corresponding property must exist on the ECMAScript global object. 
+                    The name of the property is the identifier of the interface, 
+                    and its value is an object called the interface object.
+                    */
+                    //the body of the function 
+                    var functionBody = "return function " + identifier + "(){  call(extAttrs) }";
+                    var interfaceObject = new Function("call","extAttrs", functionBody)(callOfInterfaceObject,extAttrs);
+                    /*
+                    Since an interface object for a non-callback interface is a function object, 
+                    it will have a “prototype” property with attributes 
+                    { [[Writable]]: false, [[Enumerable]]: false, [[Configurable]]: false }.
+                    */
+                    var props = {
+                        writable: false,
+                        enumerable: false,
+                        configurable: false,
+                        value: interfacePrototypeObject
+                    }
+                    Object.defineProperty(interfaceObject, "prototype", props);
+                    
+                    /*
+                    If the [NoInterfaceObject] extended attribute was not specified on the interface, 
+                    then the interface prototype object must also have a property named “constructor” 
+                    with attributes 
+                    { [[Writable]]: true, [[Enumerable]]: false, [[Configurable]]: true } whose 
+                    value is a reference to the interface object for the interface.
+                    */
+                    var props = {
+                        writable: true,
+                        enumerable: false,
+                        configurable: true,
+                        value: interfaceObject
+                    }
+                    Object.defineProperty(interfacePrototypeObject, "constructor", props)
+                    addToGlobal(interfaceObject, extAttrs);
+                   
+                   //if this has no stringifier, then we add a fake "[native code]"
+                    var props = {
+                        writable: true,
+                        enumerable: false,
+                        configurable: true
+                    }
+                    props.value = function () {
+                        return "function " + this.name + "() { [native code] }";
+                    };
+                    Object.defineProperty(interfaceObject, "toString", props);
+                    
+                } else {
+                    /*The interface object for a callback interface must not be a 
+                    function object and must not have a “prototype” property. 
+                    The internal [[Prototype]] property of an interface object 
+                    for a callback interface must be the Object.prototype object.
+                    */
+                    var interfacePrototypeObject = {}
+                    var interfaceObject = Object.create(interfacePrototypeObject);
+                }
+            }
+            
+            //process any members
+			if(members.length > 0){
+				processMembers(members, interfacePrototypeObject, interfaceObject );	
+			}
+            
+        }
+        
+        //processes members of an interface... methods and attributes. 
+        function processMembers(members, interfacePrototypeObject, interfaceObject){
+        	console.log(members, interfacePrototypeObject, interfaceObject); 
+        	//process each member according to its type
+        	members.forEach(
+        		function processMemberByType(member){
+        			switch(member.type){
+        				case "operation":{
+        					addOperation(member, interfacePrototypeObject, interfaceObject); 
+        				}	
+        			}
+        		}
+        	)
+        }
+        
+        function addOperation(member, interfacePrototypeObject, interfaceObject){
+	
+			//The name of the property is the identifier.
+			
+			
+            //The property has attributes 
+            //{ [[Writable]]: true, [[Enumerable]]: true, [[Configurable]]: true }.
+			var prop = {writable: true, enumerable: true, configurable: true }
+			
+			var value = new Function(); 
+        	
+        	var id = member.name || member.identifier;
+        	
+        	/*
+			For each unique identifier of an operation defined on the interface, 
+			there must be a corresponding property on the interface prototype object 
+			(if it is a regular operation) or the interface object (if it is a static operation), 
+			
+			TODO: unless the effective overload set for that identifier and operation 
+			and with an argument count of 0 has no entries.
+			*/
+			if(member[0] === "static"){
+				Object.defineProperty(interfaceObject, id, prop)
+			}else{
+				Object.defineProperty(interfacePrototypeObject, id, prop)
+			}
+			
+			/*
+			In addition, if the interface has a stringifier, then a property must exist on 
+			the interface prototype object whose name is “toString”, with attributes
+			{ [[Writable]]: true, [[Enumerable]]: true, [[Configurable]]: true } 
+			and whose value is a Function object. 
+			*/
+			
+			if(member.stringifier){
+				var prop = { writable: true, enumerable: true, configurable: true };
+				prop.value = makeStringifier(member, interfacePrototypeObject); 
+				Object.defineProperty(interfacePrototypeObject, "toString", prop); 
+			}
+        }
+		
+		function makeStringifier(member, interfacePrototypeObject){
+			var func; 
+			/*
+			 If stringifier was specified on an attribute A, 
+			 then the function, when invoked, must behave as follows:
+			*/
+			if(member.type === "attribute"){
+				 func = function strigifier(){
+							//Let O be the result of calling ToObject on the this value.
+							var O = ECMAScript.ToObject(this); 
+						
+							//If O is not an object that implements the interface on which 
+							//A was declared, then throw a TypeError.
+							if((O instanceof interfacePrototypeObject) === false){
+								throw TypeError;
+							}
+						
+							//Let V be the result of invoking the [[Get]] method of O with P as the argument.
+							var V = ECMAScript.Get(O, member.name); 
+				
+							//Return ToString(V).
+							return  ECMAScript.ToString(V);
+				 }
+			}
+			/*
+			If stringifier was specified on an operation with an identifier P, 
+			then the function, when invoked, must behave as follows:
+			*/
+			if(member.type === "operation"){
+				func = function(){
+					//Let O be the result of calling ToObject on the this value.
+					var O = ECMAScript.ToObject(this); 
+					
+					//Let F be the result of invoking the [[Get]] method of object O with P as the argument.
+					var F = ECMAScript.Get(O, member.name); 
+					
+					//If F is not callable, throw a TypeError.
+					if(!ECMAScript.IsCallable(F)){
+						throw TypeError;
+					}
+				   
+				    //Let V be the result of invoking the [[Call]] method of F, 
+				    //using O as the this value and passing no arguments.
+				    var V ECMAScript.Call(F,O);
+				   
+				    //Return ToString(V).
+				    return ECMAScript.ToString(V);
+				}
+			}
+			//If stringifier was specified on an operation with no identifier, 
+			//then the behavior of the function is the stringification behavior of the interface, 
+			//as described in the prose for the interface.
+			if(!func){
+				func = function(){
+					return "PROSE BASED STRINGIFIER";
+				}
+			}
+			return func; 
+		}
+		
+        function callOfInterfaceObject(extAttrs) {
+        	//If I was not declared with a [Constructor] extended attribute, then throw a TypeError.
+        	if(!hasConstructors(extAttrs)){
+	            throw new TypeError('Illegal constructor');
+	        }
+	        /*
+	        TODO: Initialize S to the effective overload set for constructors with identifier id on interface I and with argument count n.
+			Let <constructor, values> be the result of passing S and arg0..n−1 to the overload resolution algorithm.
+			Let R be the result of performing the actions listed in the description of constructor with values as the argument values.
+			Return the result of converting R to an ECMAScript interface type value I.
+	        */
+        }
+        
+        function hasConstructors(extAttrs){
+            console.warn("hasConstructors not implemented yet, returns false")
+        	return false
+        }
+        //Checks if a callback contains any constants
+        function isCBWithConstants() {
+            console.warn("isCBWithConstants not implemented yet, returns false")
+            return false;
+        }
+        //checks if it's a no interface object
+        function isNoInterfaceObj(extAttrs) {
+            var found = extAttrs.filter(
+
+            function (element) {
+                if (element.name === "NoInterfaceObject") {
+                    return element;
+                }
+            });
+            return (found.length > 0);
+        }
+        
+        /*
+        For each attribute defined on the interface, there must exist a corresponding property. 
+        @param identifier The name of the property is the identifier of the attribute.
+        */
+        function addAttributes(object, identifier){        
+			/*
+			If the attribute was declared with the [Unforgeable] extended attribute, 
+			then the property exists on every object that implements the interface. 
+			Otherwise, it exists on the interface’s interface prototype object.
+			*/	
+			
+			//The property has attributes 
+			//{ [[Get]]: G, [[Set]]: S, [[Enumerable]]: true, [[Configurable]]: configurable }, 
+			//where:
+			
+			var prop = {get: G, Set: S, enumerable: true, configurable: configurable}
+        }
+        
+        function isUnforgable(){
+        	return false; 
+        }
+        
+        //Adds the interface to global scope    
+        function addToGlobal(interfaceObject, extAttrs) {
+            /*
+            The property has the attributes { [[Writable]]: true, [[Enumerable]]: false, [[Configurable]]: true }. 
+            The characteristics of an interface object are described in section 4.4.1 below.
+            */
+            var prop = {
+                writable: true,
+                enumerable: false,
+                configurable: true,
+                value: interfaceObject
+            };
+            Object.defineProperty(global, interfaceObject.name, prop)
+            //add named constructors
+            if (hasNamedConstructors()) {
+                /*
+                TODO: In addition, for every [NamedConstructor] extended attribute on an interface, 
+                a corresponding property must exist on the ECMAScript global object. 
+                The name of the property is the identifier that occurs directly after the “=”, 
+                and its value is an object called a named constructor, 
+                which allows construction of objects that implement the interface. 
+                The property has the attributes 
+                { [[Writable]]: true, [[Enumerable]]: false, [[Configurable]]: true }. 
+                The characteristics of a named constructor are described in section 4.4.2 below.
+                */
+                var prop = {
+                    writable: true,
+                    enumerable: false,
+                    configurable: true
+                };
+            }
+        }
+        
+		function hasNamedConstructors(def){
+			//TODO: implement  
+			console.log("hasNamedConstructors() not implemented, always returns false")
+			return false; 
+		}
+    }
+	
+	
+    function ExceptionBuilder() {
+        //keep a record of things we made
+        var exceptions = [];
+        //add public interfaces: 
+        var props = ECMAScript.createDataProperty(build);
+        Object.defineProperty(this, "build", props);
+        //Builds an interface
+        function build(identifier, extendedAttributesList, exceptionMembers, parent) {
+            /*There must exist an exception interface prototype object for every exception defined, regardless of whether 
         the exception was declared with the [NoInterfaceObject] extended attribute. The exception interface prototype object 
         for a particular exception has properties that correspond to the constants and exception fields defined on the exception. 
         These properties are described in more detail in sections 4.9.3 and 4.9.4, below.
         */
-        var exceptionInterfacePrototypeObject;
-        /*The exception interface prototype object for a given exception must have an internal [[Prototype]] property whose value is as follows:
+            var exceptionInterfacePrototypeObject;
+            /*The exception interface prototype object for a given exception must have an internal [[Prototype]] property whose value is as follows:
         If the exception is declared to inherit from another exception, 
         then the value of the internal [[Prototype]] property is the exception interface 
         prototype object for the inherited exception.
         */
-        if (parent && ECMAScript.Type(parent) === "Object") {
-            exceptionInterfacePrototypeObject = Object.create(parent)
-        } else {
-            //Otherwise, the exception is not declared to inherit from another exception. 
-            //The value of the internal [[Prototype]] property is the 
-            //Error prototype object ([ECMA-262], section 15.11.3.1).
-            exceptionInterfacePrototypeObject = Object.create(new Error())
-        }
-        //TODO: The class string of an exception interface prototype object is the concatenation of the exception’s identifier and the string “Prototype”.
-        /*There must be a property named “name” on the exception interface prototype object with attributes 
+            if (parent && ECMAScript.Type(parent) === "Object") {
+                exceptionInterfacePrototypeObject = Object.create(parent)
+            } else {
+                //Otherwise, the exception is not declared to inherit from another exception. 
+                //The value of the internal [[Prototype]] property is the 
+                //Error prototype object ([ECMA-262], section 15.11.3.1).
+                exceptionInterfacePrototypeObject = Error;
+            }
+            //TODO: The class string of an exception interface prototype object is the concatenation of the exception’s identifier and the string “Prototype”.
+            /*There must be a property named “name” on the exception interface prototype object with attributes 
           { [[Writable]]: true, [[Enumerable]]: false, [[Configurable]]: true } and whose value is the identifier of the exception.
         */
-        var props = {
-            value: identifier,
-            writable: true,
-            enumerable: false,
-            configurable: true
-        };
-        Object.defineProperty(exceptionInterfacePrototypeObject, "name", props);
-        /*
+            var props = {
+                value: identifier,
+                writable: true,
+                enumerable: false,
+                configurable: true
+            };
+            try {
+                Object.defineProperty(exceptionInterfacePrototypeObject, "name", props);
+            } catch (e) {}
+            /*
         4.9.1. Exception interface object
         */
-        var code = "function " + identifier + "(){ throw new TypeError('Illegal constructor')}";
-        var exceptionInterfaceObject = Function('return ' + code)();
-        /*
-        If the [NoInterfaceObject] extended attribute was not specified on the exception,
-        */
-        if (extendedAttributesList.join().search("NoInterfaceObject") === -1) {
+            var code = "function " + identifier + "(){ throw new TypeError('Illegal constructor')};";
+            var exceptionInterfaceObject = Function('return ' + code)();
             /*
+            If the [NoInterfaceObject] extended attribute was not specified on the exception,
+            */
+            if (extendedAttributesList.join().search("NoInterfaceObject") === -1) {
+             /*
              then there must also be a property named “constructor” on the
              exception interface prototype object with attributes 
              { [[Writable]]: true, [[Enumerable]]: false, [[Configurable]]: true } 
              and whose value is a reference to the exception interface object for the exception.
              */
-            var props = {
-                value: exceptionInterfaceObject,
-                writable: true,
-                enumerable: false,
-                configurable: true
-            };
-            Object.defineProperty(exceptionInterfacePrototypeObject, "constructor", props);
-        }
-        /*
+                var props = {
+                    value: exceptionInterfaceObject,
+                    writable: true,
+                    enumerable: false,
+                    configurable: true
+                };
+                Object.defineProperty(exceptionInterfacePrototypeObject, "constructor", props);
+            }
+            /*
          The exception interface object must also have a property named “prototype” with attributes
          { [[Writable]]: false, [[Enumerable]]: false, [[Configurable]]: false } 
           whose value is an object called the exception interface prototype object. 
          This object also provides access to the constants that are declared on the exception.
         */
-        var props = {
-            value: exceptionInterfacePrototypeObject,
-            writable: false,
-            enumerable: false,
-            configurable: false
-        };
-        Object.defineProperty(exceptionInterfaceObject, "prototype", props);
-        /*
+            var props = {
+                value: exceptionInterfacePrototypeObject,
+                writable: false,
+                enumerable: false,
+                configurable: false
+            };
+            Object.defineProperty(exceptionInterfaceObject, "prototype", props);
+            /*
         4.9.1.1. Exception interface object [[Call]] method
         The internal [[Call]] method of an exception interface object must behave as follows, 
         assuming arg0..n-1 is the list of argument values passed to the function, 
         and E is the exception corresponding to the exception interface object:
         */
-        function exceptionMaker(arg0) {
-            //Let O be a new object whose [[Prototype]] internal property is set to the exception interface object
-            var O = Object.create(exceptionInterfaceObject);
-            //TODO: and whose class string is the identifier of E.
-            //If n > 0, then:
-            if (arguments.length > 0 && arg0 !== undefined) {
-                //Let S be the result of calling ToString(arg0).
-                var S = ECMAScript.ToString(arg0);
-                //Call the [[DefineOwnProperty]] internal method of O passing “message”,
-                //Property Descriptor { [[Value]]: S, [[Writable]]: true,
-                //[[Enumerable]]: false, [[Configurable]]: true }, and false as arguments.
-                var prop = {
-                    value: S,
-                    writable: true,
-                    enumerable: false,
-                    configurable: true
-                };
-                ECMAScript.DefineOwnProperty(O, "message", prop, true);
+            function exceptionMaker(arg0) {
+                //Let O be a new object whose [[Prototype]] internal property is set to the exception interface object
+                var O = Object.create(exceptionInterfaceObject);
+                //TODO: and whose class string is the identifier of E.
+                //If n > 0, then:
+                if (arguments.length > 0 && arg0 !== undefined) {
+                    //Let S be the result of calling ToString(arg0).
+                    var S = ECMAScript.ToString(arg0);
+                    //Call the [[DefineOwnProperty]] internal method of O passing “message”,
+                    //Property Descriptor { [[Value]]: S, [[Writable]]: true,
+                    //[[Enumerable]]: false, [[Configurable]]: true }, and false as arguments.
+                    var prop = {
+                        value: S,
+                        writable: true,
+                        enumerable: false,
+                        configurable: true
+                    };
+                    Object.defineProperty(O, "message", prop, true);
+                }
+                //Return O.
+                return O;
             }
-            //Return O.
-            return O;
-        }
-        if (extendedAttributesList.join().search("NoInterfaceObject") === -1) {
+            if (extendedAttributesList.join().search("NoInterfaceObject") === -1) {
             /*
             For every exception that is not declared with the [NoInterfaceObject] extended attribute, 
             a corresponding property must exist on the ECMAScript global object. The name of the property 
@@ -197,27 +579,27 @@ Self-calling constructor
             object, which provides access to any constants that have been associated with the exception. 
             The property has the attributes { [[Writable]]: true, [[Enumerable]]: false, [[Configurable]]: true }.
             */
-            var props = {
-                value: exceptionInterfaceObject,
-                writable: true,
-                enumerable: false,
-                configurable: true
-            };
-            Object.defineProperty(window, identifier, props);
-        }
-        processMembers();
+                var props = {
+                    value: exceptionInterfaceObject,
+                    writable: true,
+                    enumerable: false,
+                    configurable: true
+                };
+                Object.defineProperty(window, identifier, props);
+            }
+            processMembers();
 
-        function processMembers() {
-            for (var i = 0; i < exceptionMembers.length; i++) {
-                var member = exceptionMembers[i];
-                if (member.type === "const") {
-                    addConst(exceptionInterfaceObject, member.name, member.value, member.idlType.idlType, member.extAttrs);
+            function processMembers() {
+                for (var i = 0; i < exceptionMembers.length; i++) {
+                    var member = exceptionMembers[i];
+                    if (member.type === "const") {
+                        addConst(exceptionInterfaceObject, member.name, member.value, member.idlType.idlType, member.extAttrs);
+                    }
                 }
             }
-        }
 
-        function addConst(obj, name, value, type, extAttrs) {
-            /*
+            function addConst(obj, name, value, type, extAttrs) {
+                /*
             4.9.3. Constants
             For each constant defined on the exception, there must be a corresponding property on the exception interface object, if it exists, if the identifier of the constant is not “prototype”. The property has the following characteristics:
 
@@ -226,87 +608,88 @@ Self-calling constructor
             The property has attributes { [[Writable]]: false, [[Enumerable]]: true, [[Configurable]]: false }.
             In addition, a property with the same characteristics must exist on the exception interface prototype object.
             */
-            //TODO: convert value
-            var result;
-            switch (type) {
-                //primitive types
-            case "boolean":
-                {
-                    console.warn("not implemented: " + type)
-                    break
+                //TODO: convert value
+                var result;
+                switch (type) {
+                    //primitive types
+                case "boolean":
+                    {
+                        console.warn("not implemented: " + type)
+                        break
+                    }
+                case "float":
+                    {
+                        console.warn("not implemented: " + type)
+                        break
+                    }
+                case "unresticted float":
+                    {
+                        console.warn("not implemented: " + type)
+                        break
+                    }
+                case "unrestricted double":
+                    {
+                        console.warn("not implemented: " + type)
+                        break
+                    }
+                    //integer types 
+                case "byte":
+                    {
+                        console.warn("not implemented: " + type)
+                        break
+                    }
+                case "octet":
+                    {
+                        console.warn("not implemented: " + type)
+                        break
+                    }
+                case "short":
+                    {
+                        console.warn("not implemented: " + type)
+                        break
+                    }
+                case "unsigned short":
+                    {
+                        var result = toUnsignedShort(value, extAttrs)
+                        break
+                    }
+                case "long":
+                    {
+                        console.warn("not implemented: " + type)
+                        break
+                    }
+                case "unsigned long":
+                    {
+                        console.warn("not implemented: " + type)
+                        break
+                    }
+                case "long long":
+                    {
+                        console.warn("not implemented: " + type)
+                        break
+                    }
+                case "unsigned long long":
+                    {
+                        console.warn("not implemented: " + type)
+                        break
+                    }
                 }
-            case "float":
-                {
-                    console.warn("not implemented: " + type)
-                    break
-                }
-            case "unresticted float":
-                {
-                    console.warn("not implemented: " + type)
-                    break
-                }
-            case "unrestricted double":
-                {
-                    console.warn("not implemented: " + type)
-                    break
-                }
-                //integer types 
-            case "byte":
-                {
-                    console.warn("not implemented: " + type)
-                    break
-                }
-            case "octet":
-                {
-                    console.warn("not implemented: " + type)
-                    break
-                }
-            case "short":
-                {
-                    console.warn("not implemented: " + type)
-                    break
-                }
-            case "unsigned short":
-                {
-                    var result = toUnsignedShort(value, extAttrs)
-                    break
-                }
-            case "long":
-                {
-                    console.warn("not implemented: " + type)
-                    break
-                }
-            case "unsigned long":
-                {
-                    console.warn("not implemented: " + type)
-                    break
-                }
-            case "long long":
-                {
-                    console.warn("not implemented: " + type)
-                    break
-                }
-            case "unsigned long long":
-                {
-                    console.warn("not implemented: " + type)
-                    break
-                }
+                var prop = {
+                    value: value,
+                    writable: false,
+                    enumerable: true,
+                    configurable: false
+                };
+                Object.defineProperty(obj, name, prop);
             }
-            var prop = {
-                value: value,
-                writable: false,
-                enumerable: true,
-                configurable: false
+            //Custom returns hooks based on this object type 
+            return {
+                exception: {
+                    identifier: identifier,
+                    maker: exceptionMaker
+                }
             };
-            Object.defineProperty(obj, name, prop);
         }
-        //Custom returns hooks based on this object type 
-        return {
-            exception: {
-                identifier: identifier,
-                maker: exceptionMaker
-            }
-        };
     }
     /*
     ***** 4.2. ECMASCRIPT TYPE MAPPING ***********
@@ -425,43 +808,124 @@ Self-calling constructor
 
     function classType(O) {
         var oType = ECMAScript.Type(O)
-        //check if it's "platform object" (native code)
-        //or an user interface object
         if (oType === "Object") {
-            if (O.hasOwnProperty && O.hasOwnProperty("prototype")) {
-                /*
-                  Interface prototype object
-                  The interface object for a non-callback interface 
-                  must also have a property named “prototype” with attributes
-                  { [[Writable]]: false, [[Enumerable]]: false, [[Configurable]]: false } 
-                  whose value is an object called the interface prototype object.
-                */
-                var protoProps = Object.getOwnPropertyDescriptor(O, "prototype");
-                if (protoProps.writable === false && protoProps.enumerable === false && protoProps.configurable === false) {
-                    //In Chrome, error is not a prototype of itself, it has a special prototype "ErrorPrototype"
-                    if (O === Error && O.prototype.name === "Error" || O.prototype instanceof Error) {
-                        return "exception interface prototype";
-                    }
-                    return "interface prototype object";
-                }
-                //it's then a user object interface
-                if (protoProps.writable === true && protoProps.enumerable === false && protoProps.configurable === false) {
-                    return "user interface object";
-                }
+            if (isExceptionInterfacePrototype(O)) {
+                return "exception interface prototype";
             }
-            if (O.constructor && ECMAScript.IsCallable(O.constructor.toString)) {
-                var name = O.constructor.name;
-                var testConst = "function " + name + "() { [native code] }"
-                var nativeConst = O.constructor.toString();
-                //check if the constructor is native code
-                if (testConst === nativeConst) {
-                    return "platform object";
-                }
+            if (isInterfacePrototypeObject(O)) {
+                return "interface prototype object";
+            }
+            if (isPlatformObj(O)) {
+                return "platform object";
             }
             return "user object";
         }
         //it's not an object, so just return the type
         return oType;
+    }
+
+    function isInterfacePrototypeObject(O) {
+        var oType = ECMAScript.Type(O);
+        if (oType !== "Object") {
+            return false;
+        }
+        if (isExceptionInterfacePrototype(O)) {
+            return false;
+        }
+        if (O.hasOwnProperty && O.hasOwnProperty("prototype")) {
+            var protoProps = Object.getOwnPropertyDescriptor(O, "prototype");
+            /*
+            If the [NoInterfaceObject] extended attribute was not specified on the interface, 
+            then the interface prototype object must also have a property named “constructor” 
+            with attributes { [[Writable]]: true, [[Enumerable]]: false, [[Configurable]]: true } 
+            whose value is a reference to the interface object for the interface.
+            */
+            if (O.hasOwnProperty("constructor")) {
+                var prop = Object.getOwnPropertyDescriptor(Image.prototype, "constructor");
+                var write = prop.writable === true;
+                var enum_ = prop.enumerable === false;
+                var config = prop.configurable === true;
+                if (!write || !enum_ || !config) {
+                    return false;
+                }
+            }
+            /*
+            The interface prototype object for a given interface A 
+            must have an internal [[Prototype]] property whose value is as follows:
+            */
+            var proto = Object.getPrototypeOf(O);
+            /*
+            TODO: If A is declared with the [NamedPropertiesObject] extended attribute, 
+            then the value of the internal [[Prototype]] property of A is the named properties 
+            object for A, as defined in section 4.4.4 below.
+            */
+            /*
+            Otherwise, if A is not declared to inherit from another interface, then the value of 
+            the internal [[Prototype]] property of A is the Array prototype object ([ECMA-262],
+            section 15.4.4) if the interface was declared with [ArrayClass], or the Object prototype
+            object otherwise ([ECMA-262], section 15.2.4).
+            */
+            if ((proto instanceof Array) === false || (proto instanceof Object) === false) {
+                return false;
+            }
+            /*
+            Otherwise, the value of the internal [[Prototype]] property of A is the interface 
+            prototype object for the inherited interface.
+            */
+            return true;
+        }
+        return false;
+    }
+
+    function isException(O) {
+        var oType = ECMAScript.Type(O);
+        if (oType !== "Object") {
+            return false;
+        }
+        //All true exceptions have object in their inheritance chain  
+        if (O instanceof Error) {
+            return true;
+        }
+        return false;
+    }
+
+    function isExceptionInterfacePrototype(O) {
+        var oType = ECMAScript.Type(O);
+        if (oType !== "Object") {
+            return false;
+        }
+        if (O.hasOwnProperty && O.hasOwnProperty("prototype")) {
+            var protoProps = Object.getOwnPropertyDescriptor(O, "prototype");
+            if (protoProps.writable === false && protoProps.enumerable === false && protoProps.configurable === false) {
+                //Note: Some implementations, like Chrome, have a custom ErrorPrototype object
+                //whose function name is "Error" 
+                if (O.prototype instanceof Error || (O.prototype === Error.prototype)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function isPlatformObj(O) {
+        var oType = ECMAScript.Type(O);
+        if (oType !== "Object") {
+            return false;
+        }
+        var oClass = O.__class__;
+        var nativeTypeNames = "String,Number,Array".split(",");
+        if (nativeTypeNames.indexOf(oClass) > -1) {
+            return false;
+        }
+        //get all the platform objects bound to the window object
+        var testName = "function " + oClass + "() { [native code] }";
+        var globalInstance = globalScope[oClass];
+        if (typeof globalInstance === "function") {
+            if (testName === globalInstance.toString()) {
+                return true;
+            }
+        }
+        return false
     }
     /*
         3.10. Types
@@ -633,28 +1097,28 @@ Self-calling constructor
     }
     WebIDLUnrestrictedDouble.prototype = WebIDLBase;
     /*
-        3.10.15. DOMString
-        The DOMString type corresponds to the set of all possible sequences of code units. Such sequences are commonly interpreted as UTF-16 encoded strings
-        [RFC2781] although this is not required. While DOMString is defined to be an OMG IDL boxed sequence<unsigned short> valuetype in DOM Level 3 Core
-        ([DOM3CORE], section 1.2.1), this document defines DOMString to be an intrinsic type so as to avoid special casing that sequence type in various
-        situations where a string is required. 
-        
-        The type name of the DOMString type is “String”.
+    3.10.15. DOMString
+    The DOMString type corresponds to the set of all possible sequences of code units. Such sequences are commonly interpreted as UTF-16 encoded strings
+    [RFC2781] although this is not required. While DOMString is defined to be an OMG IDL boxed sequence<unsigned short> valuetype in DOM Level 3 Core
+    ([DOM3CORE], section 1.2.1), this document defines DOMString to be an intrinsic type so as to avoid special casing that sequence type in various
+    situations where a string is required. 
+    
+    The type name of the DOMString type is “String”.
 
-        Note
-        Note also that null is not a value of type DOMString. To allow null, a nullable DOMString, written as DOMString? in IDL, needs to be used.
-        */
+    Note
+    Note also that null is not a value of type DOMString. To allow null, a nullable DOMString, written as DOMString? in IDL, needs to be used.
+    */
     function WebIDLDOMString(value) {
         /*
-            Nothing in this specification requires a DOMString value to be a valid UTF-16 string. 
-            For example, a DOMString value might include unmatched surrogate
-            pair characters. However, authors of specifications using Web IDL might want to obtain a 
-            sequence of Unicode characters given a particular sequence of
-            code units. 
+        Nothing in this specification requires a DOMString value to be a valid UTF-16 string. 
+        For example, a DOMString value might include unmatched surrogate
+        pair characters. However, authors of specifications using Web IDL might want to obtain a 
+        sequence of Unicode characters given a particular sequence of
+        code units. 
 
-            The following algorithm defines a way to convert a DOMString to a sequence of Unicode characters:
-            Let S be the DOMString value.
-            */
+        The following algorithm defines a way to convert a DOMString to a sequence of Unicode characters:
+        Let S be the DOMString value.
+        */
         var value = convertToUnicode(value);
         this.prototype.constructor.call(this, "String");
 
@@ -710,9 +1174,9 @@ Self-calling constructor
         }
         this.prototype.constructor.call(this, "String");
         /*
-            There is no way to represent a constant DOMString value in IDL, although DOMString dictionary member and operation optional argument default 
-            values an be specified using a string literal.
-            */
+        There is no way to represent a constant DOMString value in IDL, although DOMString dictionary member and operation optional argument default 
+        values an be specified using a string literal.
+        */
     }
     WebIDLDOMString.prototype = WebIDLBase;
     /*
@@ -749,14 +1213,10 @@ Self-calling constructor
     4. ECMAScript binding
     http://dev.w3.org/2006/webapi/WebIDL/#ecmascript-binding
     */
-    //Unless otherwise specified, the [[Extensible]] internal property of objects defined in this section has the value true.
-    var extensible = true;
-    //Unless otherwise specified, the [[Prototype]] internal property of objects defined in this section is the Object prototype object.
-    var defaultProto = new Object();
-
     function convertAny(ECMAScriptValue) {}
-})(window, ECMAScript);
-/*tests*/ (function () {
+})(window, ECMAScript, window.WebIDLParser);
+
+/*tests (function () {
     var predefined_exceptions = [Error, EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError]
     for (var i = 0; i < predefined_exceptions.length; i++) {
         var e = predefined_exceptions[i];
@@ -766,3 +1226,4 @@ Self-calling constructor
         console.log(i + " is a: " + WebIDL.classType(window[i]))
     }
 })();
+*/

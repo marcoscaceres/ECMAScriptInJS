@@ -1,7 +1,7 @@
 (function () {
     "use strict";
     var ECMAScript = Object.create({});
-    var functions = [ToPrimitive, ToBoolean, ToNumber, ToInteger, ToInt32, ToUint32, ToUint16, ToString, ToObject, CheckObjectCoercible, IsCallable, SameValue, Type, DefineOwnProperty, createDataProperty, createAccessorProperty, Call];
+    var functions = [Get,ToPrimitive, ToBoolean, ToNumber, ToInteger, ToInt32, ToUint32, IsDataDescriptor, IsAccessorDescriptor, ToUint16, ToString, ToObject, CheckObjectCoercible, IsCallable, SameValue, Type, DefineOwnProperty, createDataProperty, createAccessorProperty, Call];
     //Expose functions 
     for (var i = 0; i < functions.length; i++) {
         var func = functions[i];
@@ -199,7 +199,7 @@
         //If X is a data property, then
         //(A data property descriptor is one that includes any fields named either [[Value]]
         //or [[Writable]].)
-        if (X.hasOwnProperty("value") || X.hasOwnProperty("Writable")) {
+        if (X.hasOwnProperty("value") || X.hasOwnProperty("writable")) {
             //Set D.[[Value]] to the value of X’s [[Value]] attribute.
             D.value = X.value;
             //Set D.[[Writable]] to the value of X’s [[Writable]] attribute
@@ -231,13 +231,13 @@
             return prop;
         }
         //Let proto be the value of the [[Prototype]] internal property of O.
-        var proto = O.prototype;
+        var proto = Object.getPrototypeOf(O); 
         //If proto is null, return undefined.
         if (proto === null) {
             return undefined;
         }
         //Return the result of calling the [[GetProperty]] internal method of proto with argument P.
-        GetProperty(proto, P);
+        return GetProperty(proto, P);
     }
 
     function Get(O, P) {
