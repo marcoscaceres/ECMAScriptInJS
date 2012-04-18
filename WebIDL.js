@@ -5,10 +5,14 @@
  *Code (c) Marcos Caceres, 2012 
  *Distributed under a WTFP License: http://en.wikipedia.org/wiki/WTFPL
  *
- *This document reproduces parts of the WebIDL specification as comments. The copyright for
- *that is held by the W3C: http://www.w3.org/Consortium/Legal/2002/copyright-documents-20021231
- */
+ *This program reproduces parts of the WebIDL Specification (Candidate Recommendation): 
+ *http://dev.w3.org/2006/webapi/WebIDL/
+ *Which is copyright © 2012 World Wide Web Consortium, (Massachusetts Institute of Technology, 
+ *European Research Consortium for Informatics and Mathematics, Keio University). 
+ *All Rights Reserved. http://www.w3.org/Consortium/Legal/2002/copyright-documents-20021231
 /**
+
+
 *Self-calling constructor implements the following interface:
 
 interface WebIDL : ECMAScript {
@@ -27,23 +31,20 @@ interface WebIDL : ECMAScript {
     var exceptionPrototypes = {} //Contains exception prototypes
     var interfaceBuilder = new InterfaceBuilder(globalScope) //implements interfaces 
     var exceptionBuilder = new ExceptionBuilder(globalScope) //implements exceptions  
-    
     //toString gets trashed after we initialize, but we sometimes need the native one
     var nativeToString = Object.prototype.toString;
-    
     //Fun starts here :) 
     initialize();
     selfImplement();
     //Implement WebIDL on the global scope
     function selfImplement() {
         //implement thyself. 
-        var idl = "interface WebIDL : ECMAScript {" + "   static void   test(string WebIDL, object object);" + "   static object implement(string WebIDL);" + "};"
+        var idl = "interface WebIDL : ECMAScript {" + "   stringifier DOMString wee();" + "   static void   test(string WebIDL, object object);" + "   static object implement(string WebIDL);" + "};"
         var parsedIDL = WebIDLParser.parse(idl);
         var hooks = implement(parsedIDL);
     }
     //Initialize WebIDL as per spec. 
     function initialize() {
-        
         /*
         As soon as any ECMAScript global environment is created, the following steps must be performed:
         Let F be a function object whose behavior when invoked is as follows:
@@ -59,7 +60,7 @@ interface WebIDL : ECMAScript {
             configurable: true,
             value: F
         }
-        Object.defineProperty(P, "toString", props);
+        Object.defineProperty(P, "toString2", props);
         //we keep a way of getting the [[Class]]... it's only gettable through toString
         var props = ECMAScript.createAccessorProperty(getClass)
         Object.defineProperty(P, "__class__", props);
@@ -163,8 +164,6 @@ interface WebIDL : ECMAScript {
         //add public interfaces: 
         var props = ECMAScript.createDataProperty(build);
         Object.defineProperty(this, "build", props);
-        
-        
         //Builds an interface
         function build(identifier, members, parent, extAttrs, isCallback) {
             //TODO: Check if it's a callback with constants
@@ -181,12 +180,10 @@ interface WebIDL : ECMAScript {
                 var functionBody = "return function " + identifier + "(){/*prototype object*/}"
                 var interfacePrototypeObject = new Function(functionBody)();
             }
-            
             var isNoInterface = isNoInterfaceObj(extAttrs);
-            
             //if it's not [NoInterfaceObject] and not a callback with constants 
             if (!isNoInterface && !isCBWithConsts) {
-            	//if it's not a callback 
+                //if it's not a callback 
                 if (!isCallback) {
                     /*
                     a corresponding property must exist on the ECMAScript global object. 
@@ -195,7 +192,7 @@ interface WebIDL : ECMAScript {
                     */
                     //the body of the function 
                     var functionBody = "return function " + identifier + "(){  call(extAttrs) }";
-                    var interfaceObject = new Function("call","extAttrs", functionBody)(callOfInterfaceObject,extAttrs);
+                    var interfaceObject = new Function("call", "extAttrs", functionBody)(callOfInterfaceObject, extAttrs);
                     /*
                     Since an interface object for a non-callback interface is a function object, 
                     it will have a “prototype” property with attributes 
@@ -208,7 +205,6 @@ interface WebIDL : ECMAScript {
                         value: interfacePrototypeObject
                     }
                     Object.defineProperty(interfaceObject, "prototype", props);
-                    
                     /*
                     If the [NoInterfaceObject] extended attribute was not specified on the interface, 
                     then the interface prototype object must also have a property named “constructor” 
@@ -224,8 +220,7 @@ interface WebIDL : ECMAScript {
                     }
                     Object.defineProperty(interfacePrototypeObject, "constructor", props)
                     addToGlobal(interfaceObject, extAttrs);
-                   
-                   //if this has no stringifier, then we add a fake "[native code]"
+                    //if this has no stringifier, then we add a fake "[native code]"
                     var props = {
                         writable: true,
                         enumerable: false,
@@ -234,8 +229,7 @@ interface WebIDL : ECMAScript {
                     props.value = function () {
                         return "function " + this.name + "() { [native code] }";
                     };
-                    Object.defineProperty(interfaceObject, "toString", props);
-                    
+                    Object.defineProperty(interfaceObject, "toNativeString", props);
                 } else {
                     /*The interface object for a callback interface must not be a 
                     function object and must not have a “prototype” property. 
@@ -246,43 +240,37 @@ interface WebIDL : ECMAScript {
                     var interfaceObject = Object.create(interfacePrototypeObject);
                 }
             }
-            
             //process any members
-			if(members.length > 0){
-				processMembers(members, interfacePrototypeObject, interfaceObject );	
-			}
-            
+            if (members.length > 0) {
+                processMembers(members, interfacePrototypeObject, interfaceObject);
+            }
         }
-        
         //processes members of an interface... methods and attributes. 
-        function processMembers(members, interfacePrototypeObject, interfaceObject){
-        	console.log(members, interfacePrototypeObject, interfaceObject); 
-        	//process each member according to its type
-        	members.forEach(
-        		function processMemberByType(member){
-        			switch(member.type){
-        				case "operation":{
-        					addOperation(member, interfacePrototypeObject, interfaceObject); 
-        				}	
-        			}
-        		}
-        	)
+        function processMembers(members, interfacePrototypeObject, interfaceObject) {
+            console.log(members, interfacePrototypeObject, interfaceObject);
+            //process each member according to its type
+            members.forEach(
+            function processMemberByType(member) {
+              	switch (member.type) {
+                case "operation":
+                    {
+                        addOperation(member, interfacePrototypeObject, interfaceObject);
+                    }
+                }
+            })
         }
-        
-        function addOperation(member, interfacePrototypeObject, interfaceObject){
-	
-			//The name of the property is the identifier.
-			
-			
+
+        function addOperation(member, interfacePrototypeObject, interfaceObject) {
             //The property has attributes 
             //{ [[Writable]]: true, [[Enumerable]]: true, [[Configurable]]: true }.
-			var prop = {writable: true, enumerable: true, configurable: true }
-			
-			var value = new Function(); 
-        	
-        	var id = member.name || member.identifier;
-        	
-        	/*
+            var prop = {
+                writable: true,
+                enumerable: true,
+                configurable: true,
+                value: new Function()
+            }
+            var id = member.name || member.identifier;
+            /*
 			For each unique identifier of an operation defined on the interface, 
 			there must be a corresponding property on the interface prototype object 
 			(if it is a regular operation) or the interface object (if it is a static operation), 
@@ -290,102 +278,108 @@ interface WebIDL : ECMAScript {
 			TODO: unless the effective overload set for that identifier and operation 
 			and with an argument count of 0 has no entries.
 			*/
-			if(member[0] === "static"){
-				Object.defineProperty(interfaceObject, id, prop)
-			}else{
-				Object.defineProperty(interfacePrototypeObject, id, prop)
-			}
-			
-			/*
+            if (member[0] !== "static") {
+            	console.log("Defining property", id, interfacePrototypeObject)
+                //The name of the property is the identifier.
+                Object.defineProperty(interfacePrototypeObject, id, prop); 
+            } else {
+            	console.log("Defining static property", id, interfaceObject)
+                Object.defineProperty(interfaceObject, id, prop)
+            }
+            /*
 			In addition, if the interface has a stringifier, then a property must exist on 
 			the interface prototype object whose name is “toString”, with attributes
 			{ [[Writable]]: true, [[Enumerable]]: true, [[Configurable]]: true } 
 			and whose value is a Function object. 
 			*/
-			
-			if(member.stringifier){
-				var prop = { writable: true, enumerable: true, configurable: true };
-				prop.value = makeStringifier(member, interfacePrototypeObject); 
-				Object.defineProperty(interfacePrototypeObject, "toString", prop); 
-			}
+            if (member.stringifier) {
+                var stringifier = makeStringifier(member).bind(interfacePrototypeObject);
+                var stringy = function () {
+                        stringifier(member, interfacePrototypeObject);
+                    };
+                var prop = {
+                    writable: true,
+                    enumerable: true,
+                    configurable: true,
+                    value: stringy
+                };
+                Object.defineProperty(interfacePrototypeObject, "toStringifier", prop);
+            }
         }
-		
-		function makeStringifier(member, interfacePrototypeObject){
-			var func; 
-			/*
+
+        function makeStringifier(member) {
+            switch (member.type) {
+				case "attribute":
+					{
+						return attributeToString;
+					}
+				case "operation":
+					{
+						return operationToString;
+					}
+				default:
+					{
+						//If stringifier was specified on an operation with no identifier, 
+						//then the behavior of the function is the stringification behavior of the interface, 
+						//as described in the prose for the interface.
+						return new Function("return 'PROSE BASED STRINGIFIER'");
+					}
+            }
+            /*
 			 If stringifier was specified on an attribute A, 
 			 then the function, when invoked, must behave as follows:
 			*/
-			if(member.type === "attribute"){
-				 func = function strigifier(){
-							//Let O be the result of calling ToObject on the this value.
-							var O = ECMAScript.ToObject(this); 
-						
-							//If O is not an object that implements the interface on which 
-							//A was declared, then throw a TypeError.
-							if((O instanceof interfacePrototypeObject) === false){
-								throw TypeError;
-							}
-						
-							//Let V be the result of invoking the [[Get]] method of O with P as the argument.
-							var V = ECMAScript.Get(O, member.name); 
-				
-							//Return ToString(V).
-							return  ECMAScript.ToString(V);
-				 }
-			}
-			/*
+            function attributeToString(member, interfacePrototypeObject) {
+                //Let O be the result of calling ToObject on the this value.
+                var O = ECMAScript.ToObject(this);
+                //If O is not an object that implements the interface on which 
+                //A was declared, then throw a TypeError.
+                if ((O instanceof interfacePrototypeObject) === false) {
+                    throw TypeError;
+                }
+                //Let V be the result of invoking the [[Get]] method of O with P as the argument.
+                var V = ECMAScript.Get(O, member.name);
+                //Return ToString(V).
+                return ECMAScript.ToString(V);
+            }
+            /*
 			If stringifier was specified on an operation with an identifier P, 
 			then the function, when invoked, must behave as follows:
 			*/
-			if(member.type === "operation"){
-				func = function(){
-					//Let O be the result of calling ToObject on the this value.
-					var O = ECMAScript.ToObject(this); 
-					
-					//Let F be the result of invoking the [[Get]] method of object O with P as the argument.
-					var F = ECMAScript.Get(O, member.name); 
-					
-					//If F is not callable, throw a TypeError.
-					if(!ECMAScript.IsCallable(F)){
-						throw TypeError;
-					}
-				   
-				    //Let V be the result of invoking the [[Call]] method of F, 
-				    //using O as the this value and passing no arguments.
-				    var V ECMAScript.Call(F,O);
-				   
-				    //Return ToString(V).
-				    return ECMAScript.ToString(V);
-				}
-			}
-			//If stringifier was specified on an operation with no identifier, 
-			//then the behavior of the function is the stringification behavior of the interface, 
-			//as described in the prose for the interface.
-			if(!func){
-				func = function(){
-					return "PROSE BASED STRINGIFIER";
-				}
-			}
-			return func; 
-		}
-		
+            function operationToString(member, interfacePrototypeObject) {
+                //Let O be the result of calling ToObject on the this value.
+                var O = ECMAScript.ToObject(this);
+                //Let F be the result of invoking the [[Get]] method of object O 
+                //with P as the argument.
+                var F = ECMAScript.Get(O, member.name);
+                //If F is not callable, throw a TypeError.
+                if (!ECMAScript.IsCallable(F)) {
+                    throw TypeError("Uncallable");
+                }
+                //Let V be the result of invoking the [[Call]] method of F, 
+                //using O as the this value and passing no arguments.
+                var V = ECMAScript.Call(F, O);
+                //Return ToString(V).
+                return ECMAScript.ToString(V);
+            }
+        }
+
         function callOfInterfaceObject(extAttrs) {
-        	//If I was not declared with a [Constructor] extended attribute, then throw a TypeError.
-        	if(!hasConstructors(extAttrs)){
-	            throw new TypeError('Illegal constructor');
-	        }
-	        /*
+            //If I was not declared with a [Constructor] extended attribute, then throw a TypeError.
+            if (!hasConstructors(extAttrs)) {
+               // throw new TypeError('Illegal constructor');
+            }
+            /*
 	        TODO: Initialize S to the effective overload set for constructors with identifier id on interface I and with argument count n.
 			Let <constructor, values> be the result of passing S and arg0..n−1 to the overload resolution algorithm.
 			Let R be the result of performing the actions listed in the description of constructor with values as the argument values.
 			Return the result of converting R to an ECMAScript interface type value I.
 	        */
         }
-        
-        function hasConstructors(extAttrs){
+
+        function hasConstructors(extAttrs) {
             console.warn("hasConstructors not implemented yet, returns false")
-        	return false
+            return false
         }
         //Checks if a callback contains any constants
         function isCBWithConstants() {
@@ -403,29 +397,30 @@ interface WebIDL : ECMAScript {
             });
             return (found.length > 0);
         }
-        
         /*
         For each attribute defined on the interface, there must exist a corresponding property. 
         @param identifier The name of the property is the identifier of the attribute.
         */
-        function addAttributes(object, identifier){        
-			/*
+        function addAttributes(object, identifier) {
+            /*
 			If the attribute was declared with the [Unforgeable] extended attribute, 
 			then the property exists on every object that implements the interface. 
 			Otherwise, it exists on the interface’s interface prototype object.
-			*/	
-			
-			//The property has attributes 
-			//{ [[Get]]: G, [[Set]]: S, [[Enumerable]]: true, [[Configurable]]: configurable }, 
-			//where:
-			
-			var prop = {get: G, Set: S, enumerable: true, configurable: configurable}
+			*/
+            //The property has attributes 
+            //{ [[Get]]: G, [[Set]]: S, [[Enumerable]]: true, [[Configurable]]: configurable }, 
+            //where:
+            var prop = {
+                get: G,
+                Set: S,
+                enumerable: true,
+                configurable: configurable
+            }
         }
-        
-        function isUnforgable(){
-        	return false; 
+
+        function isUnforgable() {
+            return false;
         }
-        
         //Adds the interface to global scope    
         function addToGlobal(interfaceObject, extAttrs) {
             /*
@@ -458,15 +453,32 @@ interface WebIDL : ECMAScript {
                 };
             }
         }
+
+        function hasNamedConstructors(def) {
+            //TODO: implement  
+            console.log("hasNamedConstructors() not implemented, always returns false")
+            return false;
+        }
         
-		function hasNamedConstructors(def){
-			//TODO: implement  
-			console.log("hasNamedConstructors() not implemented, always returns false")
-			return false; 
-		}
+        function addConstant(member, interfaceObject, interfaceObjectPrototype){
+			/*
+			For each constant defined on an interface A, there must be a corresponding property on 
+			the interface object, if it exists. The property has the following characteristics:
+			*/
+			//The name of the property is the identifier of the constant.
+			var name = member.name; 
+			
+			//The value of the property is that which is obtained by converting the constant’s IDL value 
+			//to an ECMAScript value.
+			
+			//The property has attributes { [[Writable]]: false, [[Enumerable]]: true, [[Configurable]]: false }.
+			var prop = {writable: false, enumerable: true, configurable: false }; 
+			//In addition, a property with the same characteristics must exist on the interface prototype object.
+			
+        }
+        
     }
-	
-	
+
     function ExceptionBuilder() {
         //keep a record of things we made
         var exceptions = [];
@@ -516,7 +528,7 @@ interface WebIDL : ECMAScript {
             If the [NoInterfaceObject] extended attribute was not specified on the exception,
             */
             if (extendedAttributesList.join().search("NoInterfaceObject") === -1) {
-             /*
+                /*
              then there must also be a property named “constructor” on the
              exception interface prototype object with attributes 
              { [[Writable]]: true, [[Enumerable]]: false, [[Configurable]]: true } 
@@ -572,7 +584,7 @@ interface WebIDL : ECMAScript {
                 return O;
             }
             if (extendedAttributesList.join().search("NoInterfaceObject") === -1) {
-            /*
+                /*
             For every exception that is not declared with the [NoInterfaceObject] extended attribute, 
             a corresponding property must exist on the ECMAScript global object. The name of the property 
             is the identifier of the exception, and its value is an object called the exception interface 
@@ -1014,7 +1026,7 @@ interface WebIDL : ECMAScript {
         this.prototype.constructor.call(this, "UnsignedShort");
     }
     WebIDLUnsignedShort.prototype = WebIDLBase;
-    /*
+    /*st
         3.10.7. long
         The long type is a signed integer type that has values in the range [-2147483648, 2147483647].
         long constant values in IDL are represented with integer tokens.
@@ -1215,7 +1227,6 @@ interface WebIDL : ECMAScript {
     */
     function convertAny(ECMAScriptValue) {}
 })(window, ECMAScript, window.WebIDLParser);
-
 /*tests (function () {
     var predefined_exceptions = [Error, EvalError, RangeError, ReferenceError, SyntaxError, TypeError, URIError]
     for (var i = 0; i < predefined_exceptions.length; i++) {
