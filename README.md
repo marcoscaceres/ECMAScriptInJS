@@ -1,1 +1,1 @@
-<img>
+<img src="http://cdn.memegenerator.net/instances/400x/16561136.jpg">
