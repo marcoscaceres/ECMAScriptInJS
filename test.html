@@ -1,0 +1,144 @@
+<Script>
+	function WebIDL() {}
+    /* 3.10. Types
+        http://dev.w3.org/2006/webapi/WebIDL/#idl-types
+    */
+
+    /*
+    Helper base class
+    @param string type the type of object
+    */
+    function IDLType(type, converter) {
+        var value,
+            props = {
+                value:{
+                    get: function() {
+                        return value;
+                    },
+                    set: function(V) {
+                        value = converter(V);
+                        return value;
+                    }
+                },
+                type: {
+                    get: function() {
+                        return type;
+                    }
+                }
+            };
+        Object.defineProperties(this, props);
+    }
+    /*
+    3.10.1. any
+    The any type is the union of all other possible non-union types. Its type name is “Any”.
+    The any type is like a discriminated union type, in that each of its values has a specific non-any type associated with it.
+    For example, one value of the any type is the unsigned long 150, while another is the long 150.
+    These are distinct values.
+    The particular type of an any value is known as its specific type. (Values of union types also have specific types.)
+    */
+    WebIDL.Any = function(value) {
+        this.value = value;
+    };
+    WebIDL.Any.prototype = new IDLType('Any');
+    /*
+    3.10.2. boolean
+    The boolean type has two values: true and false.
+    boolean constant values in IDL are represented with the true and false tokens.
+    The type name of the boolean type is “Boolean”.
+    */
+
+    WebIDL.Boolean = function(value) {
+        this.value = value;
+    };
+    /*
+    4.2.3. boolean
+    The IDL boolean value true is converted to the ECMAScript true value
+    and the IDL boolean value false is converted to the ECMAScript false value.
+    http://dev.w3.org/2006/webapi/WebIDL/#es-boolean
+    An ECMAScript value V is converted to an IDL boolean value by running the following algorithm:
+    */
+    function toBoolean(V){
+        //Let x be the result of computing ToBoolean(V).
+        x = (typeof ECMAScript !== 'undefined') ? ECMAScript.ToBoolean(V) : Boolean(V);
+        //Return the IDL boolean value that is the one that represents the same
+        //truth value as the ECMAScript Boolean value x.
+        return x;
+    }
+    WebIDL.Boolean.prototype = new IDLType('Boolean', toBoolean);
+
+    /*
+    The byte type is a signed integer type that has values in the range [-128, 127].
+    byte constant values in IDL are represented with integer tokens.
+    The type name of the byte type is “Byte”.
+    */
+
+
+    /*
+    3.10.4. octet
+    The octet type is an unsigned integer type that has values in the range [0, 255].
+    octet constant values in IDL are represented with integer tokens.
+    The type name of the octet type is “Octet”.
+    */
+    WebIDL.Octet = function(value, valueRestriction) {
+        this.value = {V: value, valueRestriction: valueRestriction};
+    };
+     /*
+    4.2.5. octet
+    The result of converting an IDL octet value to an ECMAScript value is a Number that represents the same
+    numeric value as the IDL octet value. The Number value will be an integer in the range [0, 255].
+    An ECMAScript value V is converted to an IDL octet value by running the following algorithm:
+    */
+    function toOctet(octet) {
+        //Initialize x to ToNumber(V).
+        var x = (typeof ECMAScript !== 'undefined') ? ECMAScript.ToNumber(octet.V) : Number(octet.V);
+
+        //If the conversion to an IDL value is being performed due to any of the following:
+        if (octet.valueRestriction === "EnforceRange") {
+            //V is being assigned to an attribute annotated with the [EnforceRange] extended attribute,
+            //V is being passed as an operation argument annotated with the [EnforceRange] extended attribute, or
+            //V is being used as the value of dictionary member annotated with the [EnforceRange] extended attribute,
+            //then:
+
+            //If x is NaN, +∞, or −∞, then throw a TypeError.
+            if (isNaN(x) || x === +Infinity || x === -Infinity) {
+                throw new TypeError();
+            }
+            //Set x to sign(x) * floor(abs(x)).
+            x = ((typeof ECMAScript !== 'undefined') ? ECMAScript.sign(x) : ((x > 0) ? 1 : -1)) * Math.floor(Math.abs(x));
+
+            //If x < 0 or x > 28 − 1, then throw a TypeError.
+            if (x < 0 || x > (Math.pow(2, 8) - 1)) {
+                throw new TypeError();
+            }
+            //Return the IDL octet value that represents the same numeric value as x.
+            return x;
+        }
+        //If x is not NaN and the conversion to an IDL value is being performed due to any of the following:
+        if (octet.valueRestriction === "Clamp") {
+            //V is being assigned to an attribute annotated with the [Clamp] extended attribute,
+            //V is being passed as an operation argument annotated with the [Clamp] extended attribute, or
+            //V is being used as the value of dictionary member annotated with the [Clamp] extended attribute,
+
+            //then:
+            //Set x to min(max(x, 0), 28 − 1).
+            x = Math.min(Math.max(x, 0), Math.pow(2, 8) - 1);
+
+            //Round x to the nearest integer, choosing the even integer if it lies halfway between two, and choosing +0 rather than −0.
+            x = Math.round(x);
+            //Return the IDL octet value that represents the same numeric value as x.
+            return x;
+        }
+
+        //If x is NaN, +0, −0, +∞, or −∞, then return the IDL octet value that represents 0.
+        if (isNaN(x) || x === 0 || x === +Infinity || x === -Infinity) {
+            return 0;
+        }
+        //Set x to sign(x) * floor(abs(x)).
+        x = ((typeof ECMAScript !== 'undefined') ? ECMAScript.sign(x) : ((x > 0) ? 1 : -1)) * Math.floor(Math.abs(x));
+        //Set x to x modulo 28.
+        x = x % Math.pow(2, 8);
+        //Return the IDL octet value that represents the same numeric value as x.
+        return x;
+    }
+    WebIDL.Octet.prototype = new IDLType('Octet', toOctet);
+    </script>
