@@ -1019,7 +1019,40 @@ interface WebIDL : ECMAScript {
     byte constant values in IDL are represented with integer tokens.
     The type name of the byte type is “Byte”.
     */
-    WebIDL.Byte = function(value) {};
+    WebIDL.Byte = function(value, valueRestriction) {};
+    /*
+    The result of converting an IDL byte value to an ECMAScript value is a Number that represents the same numeric value as the IDL byte value. The Number value will be an integer in the range [−128, 127].
+    An ECMAScript value V is converted to an IDL byte value by running the following algorithm:
+    */
+    function toByte(V, valueRestriction){
+        //Initialize x to ToNumber(V).
+        var x = Number(V); 
+        //If the conversion to an IDL value is being performed due to any of the following:
+        //V is being assigned to an attribute annotated with the [EnforceRange] extended attribute,
+        //V is being passed as an operation argument annotated with the [EnforceRange] extended attribute, or
+        //V is being used as the value of dictionary member annotated with the [EnforceRange] extended attribute,
+        //then:
+        if(EnforceRange){
+            //If x is NaN, +∞, or −∞, then throw a TypeError.
+            //Set x to sign(x) * floor(abs(x)).
+            //If x < −27 or x > 27 − 1, then throw a TypeError.
+            //Return the IDL byte value that represents the same numeric value as x.
+        }
+    If x is not NaN and the conversion to an IDL value is being performed due to any of the following:
+    V is being assigned to an attribute annotated with the [Clamp] extended attribute,
+    V is being passed as an operation argument annotated with the [Clamp] extended attribute, or
+    V is being used as the value of dictionary member annotated with the [Clamp] extended attribute,
+    then:
+    Round x to the nearest integer, choosing the even integer if it lies halfway between two.
+    Set x to min(max(x, −27), 27 − 1).
+    Return the IDL byte value that represents the same numeric value as x.
+    If x is NaN, +0, −0, +∞, or −∞, then return the IDL byte value that represents 0.
+    Set x to sign(x) * floor(abs(x)).
+    Set x to x modulo 28.
+    If x ≥ 27, return the IDL byte value that represents the same numeric value as x − 28. Otherwise, return the IDL byte value that represents the same numeric value as x.
+  
+    */
+
     WebIDL.Byte.prototype = new IDLType('Byte', toByte);
 
     /*
@@ -1106,12 +1139,12 @@ interface WebIDL : ECMAScript {
         */
     WebIDL.UnsignedShort = function(value) {};
     WebIDL.UnsignedShort.prototype = new IDLType('UnsignedShort');
-    /*st
-        3.10.7. long
-        The long type is a signed integer type that has values in the range [-2147483648, 2147483647].
-        long constant values in IDL are represented with integer tokens.
-        The type name of the long type is “Long”.
-        */
+    /*
+    3.10.7. long
+    The long type is a signed integer type that has values in the range [-2147483648, 2147483647].
+    long constant values in IDL are represented with integer tokens.
+    The type name of the long type is “Long”.
+    */
     WebIDL.Long = function(value) {};
     WebIDL.UnsignedShort.prototype = new IDLType('Long');
     /*
@@ -1131,11 +1164,11 @@ interface WebIDL : ECMAScript {
     WebIDL.LongLong = function(value) {};
     WebIDL.LongLong.prototype = new IDLType('LongLong');
     /*
-        3.10.10. unsigned long long
-        The unsigned long long type is an unsigned integer type that has values in the range [0, 18446744073709551615].
-        unsigned long long constant values in IDL are represented with integer tokens.
-        The type name of the unsigned long long type is “UnsignedLongLong”.
-        */
+    3.10.10. unsigned long long
+    The unsigned long long type is an unsigned integer type that has values in the range [0, 18446744073709551615].
+    unsigned long long constant values in IDL are represented with integer tokens.
+    The type name of the unsigned long long type is “UnsignedLongLong”.
+    */
     WebIDL.UnsignedLongLong = function(value) {};
     WebIDL.UnsignedLongLong.prototype = new IDLType('UnsignedLongLong');
     /*
@@ -1148,21 +1181,38 @@ interface WebIDL : ECMAScript {
     WebIDL.Float = function(value) {};
     WebIDL.Float.prototype = new IDLType('Float');
     /*
-        3.10.13. double §
-        The double type is a floating point numeric type that corresponds to the set of finite
-        double-precision 64 bit IEEE 754 floating point numbers. [IEEE-754]
-        double constant values in IDL are represented with float tokens.
-        The type name of the double type is “Double”.
-        */
+    3.10.13. double §
+    The double type is a floating point numeric type that corresponds to the set of finite
+    double-precision 64 bit IEEE 754 floating point numbers. [IEEE-754]
+    double constant values in IDL are represented with float tokens.
+    The type name of the double type is “Double”.
+    */
+
     WebIDL.Double = function(value) {};
-    WebIDL.Double.prototype = new IDLType('Double');
+    
     /*
-        3.10.14. unrestricted double
-        The unrestricted double type is a floating point numeric type that corresponds to the set of all
-        possible double-precision 32 bit IEEE 754 floating point numbers, finite and non-finite. [IEEE-754]
-        unrestricted double constant values in IDL are represented with float tokens.
-        The type name of the unrestricted double type is “UnrestrictedDouble”.
-        */
+    4.2.14. double
+    The result of converting an IDL double value to an ECMAScript value is the Number value that represents the same numeric value as the IDL double value.
+    An ECMAScript value V is converted to an IDL double value by running the following algorithm:
+    */
+    function toDouble(V){
+       //1. Let x be ToNumber(V).
+       var x = Number(V); 
+       //2. If x is NaN, +Infinity or −Infinity, then throw a TypeError.
+       if(isNaN(x) || x === +Infinity || x === -Infinity){
+            throw new TypeError();
+       }
+       //3. Return the IDL double value that has the same numeric value as x.
+       return x;
+    } 
+    WebIDL.Double.prototype = new IDLType('Double', toDouble);
+    /*
+    3.10.14. unrestricted double
+    The unrestricted double type is a floating point numeric type that corresponds to the set of all
+    possible double-precision 32 bit IEEE 754 floating point numbers, finite and non-finite. [IEEE-754]
+    unrestricted double constant values in IDL are represented with float tokens.
+    The type name of the unrestricted double type is “UnrestrictedDouble”.
+    */
     WebIDL.UnrestrictedDouble = function(value) {};
     WebIDL.UnrestrictedDouble.prototype = new IDLType('UnrestrictedDouble');
     /*
