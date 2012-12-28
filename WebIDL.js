@@ -1007,7 +1007,7 @@ interface WebIDL : ECMAScript {
     */
     function toBoolean(V){
         //Let x be the result of computing ToBoolean(V).
-        x = (typeof ECMAScript !== 'undefined') ? ECMAScript.ToBoolean(V) : Boolean(V);
+        var x = (typeof ECMAScript !== 'undefined') ? ECMAScript.ToBoolean(V) : Boolean(V);
         //Return the IDL boolean value that is the one that represents the same
         //truth value as the ECMAScript Boolean value x.
         return x;
